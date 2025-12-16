@@ -26,6 +26,7 @@ INSTALLED_APPS = [
 
     'users',
     'lms',
+    'django_filters',
 ]
 
 MIDDLEWARE = [

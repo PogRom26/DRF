@@ -20,6 +20,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include((get_router().urls, 'api'))),
     path('api/lessons/', include('lms.urls')),
+    path('api/payments/', include('users.urls')),
 ]
 
 if settings.DEBUG:

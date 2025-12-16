@@ -49,3 +49,80 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+
+class Payment(models.Model):
+    """Модель платежа."""
+
+    # Типы оплаты
+    CASH = 'cash'
+    TRANSFER = 'transfer'
+
+    PAYMENT_METHODS = [
+        (CASH, 'Наличные'),
+        (TRANSFER, 'Перевод на счет'),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='payments',
+        verbose_name='Пользователь'
+    )
+
+    # Ссылка на курс (опционально)
+    course = models.ForeignKey(
+        'lms.Course',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payments',
+        verbose_name='Оплаченный курс'
+    )
+
+    # Ссылка на урок (опционально)
+    lesson = models.ForeignKey(
+        'lms.Lesson',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payments',
+        verbose_name='Оплаченный урок'
+    )
+
+    payment_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата оплаты'
+    )
+
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name='Сумма оплаты'
+    )
+
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_METHODS,
+        verbose_name='Способ оплаты'
+    )
+
+    class Meta:
+        verbose_name = 'Платеж'
+        verbose_name_plural = 'Платежи'
+        ordering = ['-payment_date']
+
+    def __str__(self):
+        return f"Платеж {self.id} - {self.user.email} - {self.amount}"
+
+    def clean(self):
+        """Проверяем, что оплачен либо курс, либо урок."""
+        from django.core.exceptions import ValidationError
+        if not self.course and not self.lesson:
+            raise ValidationError('Должен быть указан либо курс, либо урок')
+        if self.course and self.lesson:
+            raise ValidationError('Можно указать только курс ИЛИ урок, не оба сразу')
+
+    def get_payment_method_display(self):
+        """Возвращает человекочитаемое название способа оплаты."""
+        return dict(self.PAYMENT_METHODS).get(self.payment_method, self.payment_method)
