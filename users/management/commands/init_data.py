@@ -194,3 +194,31 @@ class Command(BaseCommand):
         self.stdout.write("  2. Модераторы могут просматривать и редактировать, но не создавать/удалять")
         self.stdout.write("  3. Админы могут все")
         self.stdout.write("=" * 50)
+
+        # В разделе создания курсов:
+        for course_data in courses_data:
+            course, created = Course.objects.get_or_create(
+                title=course_data['title'],
+                defaults={
+                    **course_data,
+                    'owner': User.objects.filter(email='admin@example.com').first()  # Админ владеет курсами
+                }
+            )
+            if created:
+                courses.append(course)
+
+        # В разделе создания уроков:
+        for course in courses:
+            for i in range(1, 6):
+                lesson_data = {
+                    'title': f'Урок {i}: Основы курса "{course.title}"',
+                    'description': f'Подробное описание урока {i} курса "{course.title}".',
+                    'video_url': f'https://www.youtube.com/watch?v=lesson_{course.id}_{i}',
+                    'course': course,
+                    'owner': course.owner  # Уроки принадлежат тому же владельцу, что и курс
+                }
+                lesson, created = Lesson.objects.get_or_create(
+                    title=lesson_data['title'],
+                    course=course,
+                    defaults=lesson_data
+                )

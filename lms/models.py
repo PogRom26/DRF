@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 
 
 class Course(models.Model):
@@ -8,6 +9,17 @@ class Course(models.Model):
     title = models.CharField(max_length=255, verbose_name='Название курса')
     preview = models.ImageField(upload_to='courses/previews/', verbose_name='Превью', blank=True, null=True)
     description = models.TextField(verbose_name='Описание')
+
+    # Добавляем поле владельца
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='courses',
+        verbose_name='Владелец'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
 
@@ -27,12 +39,24 @@ class Lesson(models.Model):
     description = models.TextField(verbose_name='Описание')
     preview = models.ImageField(upload_to='lessons/previews/', verbose_name='Превью', blank=True, null=True)
     video_url = models.URLField(verbose_name='Ссылка на видео')
+
     course = models.ForeignKey(
         Course,
         on_delete=models.CASCADE,
         related_name='lessons',
         verbose_name='Курс'
     )
+
+    # Добавляем поле владельца
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lessons',
+        verbose_name='Владелец'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
 
