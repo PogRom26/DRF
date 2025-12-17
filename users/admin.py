@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import Group
 from .models import User, Payment
 
 
@@ -21,8 +22,8 @@ class PaymentAdmin(admin.ModelAdmin):
 
 
 class CustomUserAdmin(UserAdmin):
-    list_display = ('email', 'first_name', 'last_name', 'phone', 'city', 'is_staff')
-    list_filter = ('is_staff', 'is_superuser', 'is_active')
+    list_display = ('email', 'first_name', 'last_name', 'phone', 'city', 'is_staff', 'get_groups')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
     search_fields = ('email', 'first_name', 'last_name', 'phone')
     ordering = ('email',)
 
@@ -40,6 +41,12 @@ class CustomUserAdmin(UserAdmin):
         }),
     )
 
+    # Дополнительное поле для отображения групп
+    def get_groups(self, obj):
+        return ", ".join([group.name for group in obj.groups.all()])
+
+    get_groups.short_description = 'Группы'
+
     # Дополнительное задание: показываем платежи пользователя в админке
     readonly_fields = ('payments_display',)
 
@@ -52,6 +59,21 @@ class CustomUserAdmin(UserAdmin):
 
     payments_display.short_description = 'Последние платежи'
     payments_display.allow_tags = True
+
+
+# Отменяем регистрацию стандартной модели Group и регистрируем свою (опционально)
+admin.site.unregister(Group)
+
+
+@admin.register(Group)
+class GroupAdmin(admin.ModelAdmin):
+    list_display = ('name', 'get_user_count')
+    search_fields = ('name',)
+
+    def get_user_count(self, obj):
+        return obj.user_set.count()
+
+    get_user_count.short_description = 'Количество пользователей'
 
 
 admin.site.register(User, CustomUserAdmin)

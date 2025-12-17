@@ -11,7 +11,7 @@ from .serializers import (
     UserLoginSerializer, PaymentSerializer
 )
 from .filters import PaymentFilter
-from .permissions import IsOwnerOrReadOnly, IsOwner
+from .permissions import IsOwner, IsOwnerOrReadOnly, IsModerator
 
 User = get_user_model()
 
@@ -38,7 +38,8 @@ class UserViewSet(viewsets.ModelViewSet):
         elif self.action == 'retrieve':
             permission_classes = [permissions.IsAuthenticated]  # Просмотр только авторизованным
         else:  # 'list'
-            permission_classes = [permissions.IsAdminUser]  # Список только админам
+            # Список пользователей доступен только админам и модераторам
+            permission_classes = [permissions.IsAuthenticated, IsModerator | permissions.IsAdminUser]
         return [permission() for permission in permission_classes]
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
@@ -68,10 +69,15 @@ class RegisterAPIView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
+        # Автоматически добавляем нового пользователя в группу студентов
+        from django.contrib.auth.models import Group
+        students_group, created = Group.objects.get_or_create(name='students')
+        user.groups.add(students_group)
+
         return Response({
             'user': UserSerializer(user, context=self.get_serializer_context()).data,
             'tokens': serializer.data['tokens'],
-            'message': 'Пользователь успешно зарегистрирован'
+            'message': 'Пользователь успешно зарегистрирован и добавлен в группу студентов'
         }, status=status.HTTP_201_CREATED)
 
 
@@ -138,8 +144,8 @@ class UserPaymentsAPIView(generics.ListAPIView):
 
     def get_permissions(self):
         """Только админ или владелец может смотреть платежи."""
-        if self.request.user.is_staff:
-            permission_classes = [permissions.IsAdminUser]
+        if self.request.user.is_staff or self.request.user.groups.filter(name='moderators').exists():
+            permission_classes = [permissions.IsAuthenticated]
         else:
             permission_classes = [IsOwner]
         return [permission() for permission in permission_classes]
