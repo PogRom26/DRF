@@ -12,6 +12,40 @@ class IsOwner(permissions.BasePermission):
         return obj == request.user
 
 
+class IsOwnerOrAdmin(permissions.BasePermission):
+    """Разрешение для владельца или админа (без модераторов)."""
+
+    def has_object_permission(self, request, view, obj):
+        # Проверяем, является ли пользователь владельцем
+        if hasattr(obj, 'owner') and obj.owner == request.user:
+            return True
+
+        # Проверяем, является ли пользователь админом
+        if request.user and request.user.is_staff:
+            return True
+
+        return False
+
+
+class IsOwnerOrAdminOrModerator(permissions.BasePermission):
+    """Разрешение для владельца, админа или модератора."""
+
+    def has_object_permission(self, request, view, obj):
+        # Проверяем, является ли пользователь владельцем
+        if hasattr(obj, 'owner') and obj.owner == request.user:
+            return True
+
+        # Проверяем, является ли пользователь админом
+        if request.user and request.user.is_staff:
+            return True
+
+        # Проверяем, является ли пользователь модератором
+        if request.user and request.user.groups.filter(name='moderators').exists():
+            return True
+
+        return False
+
+
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """Разрешение на чтение для всех, изменение только для владельца."""
 
@@ -118,27 +152,8 @@ class IsModeratorOrReadOnly(permissions.BasePermission):
         return request.user and request.user.groups.filter(name='moderators').exists()
 
 
-class IsOwnerOrModeratorOrAdmin(permissions.BasePermission):
-    """Разрешение для владельца, модератора или админа."""
-
-    def has_object_permission(self, request, view, obj):
-        # Проверяем, является ли пользователь владельцем
-        if hasattr(obj, 'owner') and obj.owner == request.user:
-            return True
-
-        # Проверяем, является ли пользователь модератором
-        if request.user and request.user.groups.filter(name='moderators').exists():
-            return True
-
-        # Проверяем, является ли пользователь админом
-        if request.user and request.user.is_staff:
-            return True
-
-        return False
-
-
 class IsCourseOwnerOrModeratorOrAdmin(permissions.BasePermission):
-    """Разрешение для владельца курса, модератора или админа."""
+    """Разрешение для владельца курса, модератора или админа (для редактирования)."""
 
     def has_object_permission(self, request, view, obj):
         # Для курсов проверяем владельца
@@ -159,7 +174,7 @@ class IsCourseOwnerOrModeratorOrAdmin(permissions.BasePermission):
 
 
 class IsLessonOwnerOrModeratorOrAdmin(permissions.BasePermission):
-    """Разрешение для владельца урока, модератора или админа."""
+    """Разрешение для владельца урока, модератора или админа (для редактирования)."""
 
     def has_object_permission(self, request, view, obj):
         # Для уроков проверяем владельца
@@ -177,6 +192,44 @@ class IsLessonOwnerOrModeratorOrAdmin(permissions.BasePermission):
             return True
 
         # Проверяем, является ли пользователь админом
+        if request.user and request.user.is_staff:
+            return True
+
+        return False
+
+
+class IsCourseOwnerOrAdmin(permissions.BasePermission):
+    """Разрешение только для владельца курса или админа (без модераторов)."""
+
+    def has_object_permission(self, request, view, obj):
+        # Для курсов проверяем владельца
+        if hasattr(obj, 'owner'):
+            # Проверяем, является ли пользователь владельцем курса
+            if obj.owner == request.user:
+                return True
+
+        # Проверяем, является ли пользователь админом (модераторы НЕ проходят)
+        if request.user and request.user.is_staff:
+            return True
+
+        return False
+
+
+class IsLessonOwnerOrAdmin(permissions.BasePermission):
+    """Разрешение только для владельца урока или админа (без модераторов)."""
+
+    def has_object_permission(self, request, view, obj):
+        # Для уроков проверяем владельца
+        if hasattr(obj, 'owner'):
+            # Проверяем, является ли пользователь владельцем урока
+            if obj.owner == request.user:
+                return True
+
+            # Также проверяем, является ли пользователь владельцем курса, к которому относится урок
+            if hasattr(obj, 'course') and obj.course.owner == request.user:
+                return True
+
+        # Проверяем, является ли пользователь админом (модераторы НЕ проходят)
         if request.user and request.user.is_staff:
             return True
 

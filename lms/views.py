@@ -1,15 +1,16 @@
+from django.db import models
 from rest_framework import generics
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from users.permissions import (
-    IsModerator, IsOwnerOrModeratorOrAdmin,
-    IsCourseOwnerOrModeratorOrAdmin, IsNotModerator
+    IsModerator, IsNotModerator, IsOwnerOrAdmin,
+    IsLessonOwnerOrModeratorOrAdmin, IsLessonOwnerOrAdmin,
+    IsCourseOwnerOrModeratorOrAdmin, IsCourseOwnerOrAdmin
 )
 from .models import Course, Lesson
 from .serializers import CourseSerializer, LessonSerializer
-from django.db import models
 
 
 class LessonListCreateAPIView(generics.ListCreateAPIView):
@@ -50,9 +51,12 @@ class LessonRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method == 'GET':
             # Просмотр доступен авторизованным пользователям
             permission_classes = [IsAuthenticated]
-        elif self.request.method in ['PUT', 'PATCH', 'DELETE']:
-            # Редактирование и удаление доступно владельцу, модераторам или админам
+        elif self.request.method in ['PUT', 'PATCH']:
+            # Редактирование доступно владельцу, модераторам или админам
             permission_classes = [IsAuthenticated, IsLessonOwnerOrModeratorOrAdmin]
+        elif self.request.method == 'DELETE':
+            # УДАЛЕНИЕ доступно только владельцу или админу (без модераторов!)
+            permission_classes = [IsAuthenticated, IsLessonOwnerOrAdmin]
         else:
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
@@ -94,8 +98,8 @@ class CourseViewSet(viewsets.ModelViewSet):
             # Создание доступно авторизованным пользователям, которые НЕ модераторы
             permission_classes = [IsAuthenticated, IsNotModerator]
         elif self.action == 'destroy':
-            # Удаление доступно владельцу, модераторам или админам
-            permission_classes = [IsAuthenticated, IsCourseOwnerOrModeratorOrAdmin]
+            # УДАЛЕНИЕ доступно только владельцу или админу (без модераторов!)
+            permission_classes = [IsAuthenticated, IsCourseOwnerOrAdmin]
         elif self.action in ['update', 'partial_update']:
             # Редактирование доступно владельцу, модераторам или админам
             permission_classes = [IsAuthenticated, IsCourseOwnerOrModeratorOrAdmin]
