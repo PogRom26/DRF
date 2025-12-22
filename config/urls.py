@@ -6,7 +6,6 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 
 
-# Ленивые импорты, чтобы избежать ошибок
 def get_router():
     from lms.views import CourseViewSet
     from users.views import UserViewSet
