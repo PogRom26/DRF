@@ -9,21 +9,25 @@ User = get_user_model()
 class PaymentSerializer(serializers.ModelSerializer):
     """Сериализатор для платежей."""
 
-    # Используем импорты внутри методов, чтобы избежать циклических импортов
     course_info = serializers.SerializerMethodField()
     lesson_info = serializers.SerializerMethodField()
     user_email = serializers.EmailField(source='user.email', read_only=True)
+    stripe_payment_url = serializers.URLField(read_only=True)  # Делаем доступным для чтения
 
     class Meta:
         model = Payment
         fields = [
             'id', 'user', 'user_email', 'payment_date',
             'course', 'lesson', 'course_info', 'lesson_info',
-            'amount', 'payment_method', 'payment_method_display',
+            'price', 'amount', 'payment_method', 'payment_method_display',
             'stripe_product_id', 'stripe_price_id', 'stripe_session_id',
-            'stripe_payment_url', 'payment_status'
+            'stripe_payment_url', 'stripe_payment_intent_id', 'payment_status'
         ]
-        read_only_fields = ['payment_date']
+        read_only_fields = [
+            'payment_date', 'stripe_product_id', 'stripe_price_id',
+            'stripe_session_id', 'stripe_payment_url', 'stripe_payment_intent_id',
+            'payment_status'
+        ]
 
     def get_course_info(self, obj):
         """Получаем информацию о курсе."""
@@ -39,11 +43,24 @@ class PaymentSerializer(serializers.ModelSerializer):
             return LessonSerializer(obj.lesson).data
         return None
 
-    # Добавляем поле для отображения человекочитаемого способа оплаты
     payment_method_display = serializers.CharField(
         source='get_payment_method_display',
         read_only=True
     )
+
+    def validate(self, data):
+        """Валидация данных платежа."""
+        # Если выбран способ оплаты stripe, проверяем наличие курса
+        if data.get('payment_method') == 'stripe' and not data.get('course'):
+            raise serializers.ValidationError(
+                {"course": "Для оплаты через Stripe необходимо указать курс"}
+            )
+
+        # Устанавливаем amount равным price, если amount не указан
+        if 'price' in data and 'amount' not in data:
+            data['amount'] = data['price']
+
+        return data
 
 
 class UserSerializer(serializers.ModelSerializer):

@@ -107,6 +107,12 @@ class Payment(models.Model):
         verbose_name='Способ оплаты'
     )
 
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        verbose_name='Цена')
+
     class Meta:
         verbose_name = 'Платеж'
         verbose_name_plural = 'Платежи'

@@ -5,11 +5,19 @@ class IsOwner(permissions.BasePermission):
     """Разрешение только для владельца объекта."""
 
     def has_object_permission(self, request, view, obj):
-        # Проверяем, есть ли у объекта поле owner
-        if hasattr(obj, 'owner'):
+        # Проверяем, есть ли у объекта поле user или owner
+        if hasattr(obj, 'user'):
+            return obj.user == request.user
+        elif hasattr(obj, 'owner'):
             return obj.owner == request.user
-        # Если нет поля owner, проверяем, является ли объект пользователем
+        # Если нет поля user/owner, проверяем, является ли объект пользователем
         return obj == request.user
+
+    def has_permission(self, request, view):
+        # Для UserPaymentsAPIView проверяем, что user_id соответствует текущему пользователю
+        if hasattr(view, 'kwargs') and 'user_id' in view.kwargs:
+            return str(view.kwargs['user_id']) == str(request.user.id)
+        return True
 
 
 class IsOwnerOrAdmin(permissions.BasePermission):
