@@ -5,13 +5,14 @@ from rest_framework.filters import OrderingFilter
 from rest_framework_simplejwt.tokens import RefreshToken
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from .models import Payment
 from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
     UserLoginSerializer, PaymentSerializer
 )
 from .filters import PaymentFilter
-from .permissions import IsOwner, IsOwnerOrReadOnly, IsModerator
+from .permissions import IsOwner, IsNotModerator
 
 User = get_user_model()
 
@@ -39,7 +40,7 @@ class UserViewSet(viewsets.ModelViewSet):
             permission_classes = [permissions.IsAuthenticated]  # Просмотр только авторизованным
         else:  # 'list'
             # Список пользователей доступен только админам и модераторам
-            permission_classes = [permissions.IsAuthenticated, IsModerator | permissions.IsAdminUser]
+            permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser | IsNotModerator]
         return [permission() for permission in permission_classes]
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
@@ -70,7 +71,6 @@ class RegisterAPIView(generics.CreateAPIView):
         user = serializer.save()
 
         # Автоматически добавляем нового пользователя в группу студентов
-        from django.contrib.auth.models import Group
         students_group, created = Group.objects.get_or_create(name='students')
         user.groups.add(students_group)
 
@@ -133,6 +133,8 @@ class PaymentListAPIView(generics.ListAPIView):
         """Возвращаем платежи только текущего пользователя."""
         return Payment.objects.filter(user=self.request.user)
 
+
+# Добавьте этот класс после класса PaymentListAPIView в users/views.py
 
 class UserPaymentsAPIView(generics.ListAPIView):
     """Получение платежей конкретного пользователя (только для админов или владельца)."""

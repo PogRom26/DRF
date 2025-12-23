@@ -20,12 +20,8 @@ class LessonSerializer(serializers.ModelSerializer):
             NoExternalLinksValidator(fields=['description'])
         ]
 
-    # Альтернативный вариант с функцией-валидатором для поля
-    # video_url = serializers.URLField(validators=[validate_youtube_url])
-
     def validate_video_url(self, value):
         """Дополнительная валидация URL через метод поля."""
-        # Можно использовать функцию-валидатор
         from .validators import validate_youtube_url
         return validate_youtube_url(value)
 
@@ -63,7 +59,10 @@ class CourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = '__all__'
+        fields = [
+            'id', 'title', 'preview', 'description', 'owner', 'owner_email',
+            'created_at', 'updated_at', 'lessons_count', 'lessons'
+        ]
         read_only_fields = ['created_at', 'updated_at', 'owner']
 
         # Добавляем валидатор для проверки внешних ссылок в описании
@@ -94,8 +93,10 @@ class CourseWithSubscriptionSerializer(CourseSerializer):
 
     is_subscribed = serializers.SerializerMethodField()
 
-    class Meta(CourseSerializer.Meta):
+    class Meta:
+        model = Course
         fields = CourseSerializer.Meta.fields + ['is_subscribed']
+        read_only_fields = CourseSerializer.Meta.read_only_fields
 
     def get_is_subscribed(self, obj):
         """Проверяем, подписан ли текущий пользователь на курс."""

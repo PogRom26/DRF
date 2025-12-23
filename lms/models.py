@@ -110,3 +110,58 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f"{self.user.email} подписан на {self.course.title}"
+
+
+class Payment(models.Model):
+    """Модель платежа."""
+
+    # ... существующие поля ...
+
+    # Поля для Stripe
+    stripe_product_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='ID продукта в Stripe'
+    )
+
+    stripe_price_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='ID цены в Stripe'
+    )
+
+    stripe_session_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='ID сессии в Stripe'
+    )
+
+    stripe_payment_intent_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name='ID платежа в Stripe'
+    )
+
+    stripe_payment_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name='Ссылка на оплату Stripe'
+    )
+
+    payment_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Ожидает оплаты'),
+            ('processing', 'В обработке'),
+            ('succeeded', 'Успешно'),
+            ('failed', 'Неудачно'),
+            ('refunded', 'Возвращено'),
+        ],
+        default='pending',
+        verbose_name='Статус платежа'
+    )

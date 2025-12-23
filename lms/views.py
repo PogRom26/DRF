@@ -12,6 +12,8 @@ from users.permissions import (
 from .models import Course, Lesson
 from .serializers import CourseSerializer, LessonSerializer
 from .paginators import LessonPaginator, CoursePaginator
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 
 
 class LessonListCreateAPIView(generics.ListCreateAPIView):
@@ -90,6 +92,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     pagination_class = CoursePaginator
 
 
+
     def get_serializer_class(self):
         """Выбираем сериализатор в зависимости от действия."""
         if self.action in ['list', 'retrieve']:
@@ -156,6 +159,54 @@ class CourseViewSet(viewsets.ModelViewSet):
         serializer = LessonSerializer(lessons, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        tags=['courses'],
+        description='Получить список курсов с пагинацией',
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Номер страницы'
+            ),
+            OpenApiParameter(
+                name='page_size',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Количество элементов на странице (макс. 20)'
+            ),
+        ],
+        responses={
+            200: CourseSerializer(many=True),
+            401: {'description': 'Не авторизован'},
+        }
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        tags=['courses'],
+        description='Создать новый курс',
+        request=CourseSerializer,
+        responses={
+            201: CourseSerializer,
+            400: {'description': 'Некорректные данные'},
+            403: {'description': 'Нет прав на создание курса'},
+        },
+        examples=[
+            OpenApiExample(
+                'Пример создания курса',
+                value={
+                    'title': 'Новый курс',
+                    'description': 'Описание нового курса',
+                    'preview': None,
+                },
+                request_only=True
+            )
+        ]
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
 
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -240,4 +291,25 @@ class CourseSubscriptionAPIView(APIView):
             "course_id": course.id,
             "course_title": course.title,
             "is_subscribed": is_subscribed
+        })
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class CreateCoursePaymentAPIView(APIView):
+    """Заглушка для создания платежа за курс через Stripe."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        return Response({
+            'success': True,
+            'message': 'Stripe integration will be implemented here',
+            'payment_url': 'https://stripe.com/test'
         })

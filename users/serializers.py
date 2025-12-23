@@ -2,7 +2,6 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Payment
-from lms.serializers import CourseSerializer, LessonSerializer
 
 User = get_user_model()
 
@@ -10,8 +9,9 @@ User = get_user_model()
 class PaymentSerializer(serializers.ModelSerializer):
     """Сериализатор для платежей."""
 
-    course_info = CourseSerializer(source='course', read_only=True)
-    lesson_info = LessonSerializer(source='lesson', read_only=True)
+    # Используем импорты внутри методов, чтобы избежать циклических импортов
+    course_info = serializers.SerializerMethodField()
+    lesson_info = serializers.SerializerMethodField()
     user_email = serializers.EmailField(source='user.email', read_only=True)
 
     class Meta:
@@ -19,10 +19,27 @@ class PaymentSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'user', 'user_email', 'payment_date',
             'course', 'lesson', 'course_info', 'lesson_info',
-            'amount', 'payment_method', 'payment_method_display'
+            'amount', 'payment_method', 'payment_method_display',
+            'stripe_product_id', 'stripe_price_id', 'stripe_session_id',
+            'stripe_payment_url', 'payment_status'
         ]
         read_only_fields = ['payment_date']
 
+    def get_course_info(self, obj):
+        """Получаем информацию о курсе."""
+        if obj.course:
+            from lms.serializers import CourseSerializer
+            return CourseSerializer(obj.course).data
+        return None
+
+    def get_lesson_info(self, obj):
+        """Получаем информацию об уроке."""
+        if obj.lesson:
+            from lms.serializers import LessonSerializer
+            return LessonSerializer(obj.lesson).data
+        return None
+
+    # Добавляем поле для отображения человекочитаемого способа оплаты
     payment_method_display = serializers.CharField(
         source='get_payment_method_display',
         read_only=True
@@ -32,7 +49,6 @@ class PaymentSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     """Сериализатор для пользователя (чтение)."""
 
-    payments = PaymentSerializer(many=True, read_only=True)
     payments_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -40,11 +56,12 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'email', 'first_name', 'last_name',
             'phone', 'city', 'avatar', 'date_joined',
-            'payments', 'payments_count'
+            'payments_count'
         ]
         read_only_fields = ['date_joined']
 
     def get_payments_count(self, obj):
+        """Количество платежей пользователя."""
         return obj.payments.count()
 
 

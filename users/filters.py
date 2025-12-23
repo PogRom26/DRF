@@ -16,7 +16,18 @@ class PaymentFilter(django_filters.FilterSet):
         choices=Payment.PAYMENT_METHODS
     )
 
-    # Сортировка по дате оплаты
+    # Фильтрация по статусу платежа
+    payment_status = django_filters.ChoiceFilter(
+        choices=[
+            ('pending', 'Ожидает оплаты'),
+            ('processing', 'В обработке'),
+            ('succeeded', 'Успешно'),
+            ('failed', 'Неудачно'),
+            ('refunded', 'Возвращено'),
+        ]
+    )
+
+    # Сортировка
     ordering = django_filters.OrderingFilter(
         fields=(
             ('payment_date', 'payment_date'),
@@ -34,4 +45,4 @@ class PaymentFilter(django_filters.FilterSet):
 
     class Meta:
         model = Payment
-        fields = ['course', 'lesson', 'payment_method']
+        fields = ['course', 'lesson', 'payment_method', 'payment_status']
