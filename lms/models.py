@@ -1,7 +1,8 @@
+from datetime import timezone
 from typing import Any
 
-from django.db import models
 from django.conf import settings
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
@@ -22,8 +23,20 @@ class Course(models.Model):
         verbose_name='Владелец'
     )
 
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата последнего обновления'
+    )
+
+    def save(self, *args, **kwargs):
+        # Обновляем поле updated_at при сохранении
+        if self.pk:
+            self.updated_at = timezone.now()
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'Курс'
@@ -63,8 +76,22 @@ class Lesson(models.Model):
         verbose_name='Владелец'
     )
 
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата последнего обновления'
+    )
+
+    def save(self, *args, **kwargs):
+        # Обновляем поле updated_at урока и родительского курса
+        if self.pk:
+            self.updated_at = timezone.now()
+            if self.course:
+                self.course.save()  # Это обновит updated_at курса
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'Урок'

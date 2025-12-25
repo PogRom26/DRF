@@ -1,8 +1,7 @@
 from django.urls import path
-from .views import (
-    LessonListCreateAPIView, LessonRetrieveUpdateDestroyAPIView,
-    SubscriptionAPIView, CourseSubscriptionAPIView
-)
+
+from .views import (CourseSubscriptionAPIView, LessonListCreateAPIView,
+                    LessonRetrieveUpdateDestroyAPIView, SubscriptionAPIView)
 
 urlpatterns = [
     path('', LessonListCreateAPIView.as_view(), name='lesson-list'),

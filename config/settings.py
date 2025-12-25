@@ -3,8 +3,9 @@ Django settings for DRF project.
 """
 
 import os
-from pathlib import Path
 from datetime import timedelta
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Загружаем переменные окружения из .env файла
@@ -195,3 +196,26 @@ if DEBUG and (not STRIPE_PUBLISHABLE_KEY or not STRIPE_SECRET_KEY):
     print("   И добавьте их в .env файл:")
     print("   STRIPE_PUBLISHABLE_KEY=pk_test_...")
     print("   STRIPE_SECRET_KEY=sk_test_...")
+
+
+# Redis settings
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+REDIS_DB = os.environ.get('REDIS_DB', '0')
+REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '')
+
+# Celery settings
+CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+CELERY_RESULT_BACKEND = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE  # Важно: должна совпадать с TIME_ZONE Django
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 минут
+CELERY_BEAT_SCHEDULE = {
+    'check-inactive-users-every-day': {
+        'task': 'users.tasks.check_inactive_users',
+        'schedule': 86400.0,  # Каждые 24 часа
+    },
+}

@@ -1,7 +1,8 @@
+import re
+from urllib.parse import urlparse
+
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
-from urllib.parse import urlparse
-import re
 
 
 def validate_youtube_url(value):

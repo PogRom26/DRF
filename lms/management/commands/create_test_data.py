@@ -1,8 +1,10 @@
-from django.core.management.base import BaseCommand
-from django.contrib.auth import get_user_model
-from lms.models import Course, Lesson
-from decimal import Decimal
 import random
+from decimal import Decimal
+
+from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
+
+from lms.models import Course, Lesson
 
 User = get_user_model()
 

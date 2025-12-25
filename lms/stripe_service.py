@@ -1,8 +1,9 @@
-import stripe
-import os
-from django.conf import settings
-from decimal import Decimal
 import logging
+import os
+from decimal import Decimal
+
+import stripe
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 

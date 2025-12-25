@@ -1,12 +1,8 @@
 from django.urls import path
-from .views import (
-    PaymentCreateAPIView,
-    PaymentListAPIView,
-    PaymentRetrieveAPIView,
-    StripePaymentStatusAPIView,
-    CreateStripePaymentForCourseAPIView,
-    UserPaymentsAPIView
-)
+
+from .views import (CreateStripePaymentForCourseAPIView, PaymentCreateAPIView,
+                    PaymentListAPIView, PaymentRetrieveAPIView,
+                    StripePaymentStatusAPIView, UserPaymentsAPIView)
 
 urlpatterns = [
     # Основные эндпоинты платежей

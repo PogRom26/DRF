@@ -72,6 +72,18 @@ six = ">=1.11.0"
 dev = ["coverage", "django (>=2.0,<2.1)", "flake8", "tox"]
 
 [[package]]
+name = "html2text"
+version = "2025.4.15"
+description = "Turn HTML into equivalent Markdown-structured text."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "html2text-2025.4.15-py3-none-any.whl", hash = "sha256:00569167ffdab3d7767a4cdf589b7f57e777a5ed28d12907d8c58769ec734acc"},
+    {file = "html2text-2025.4.15.tar.gz", hash = "sha256:948a645f8f0bc3abe7fd587019a2197a12436cd73d0d4908af95bfc8da337588"},
+]
+
+[[package]]
 name = "six"
 version = "1.17.0"
 description = "Python 2 and 3 compatibility utilities"
@@ -115,4 +127,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13"
-content-hash = "1a442151726f1ef23545d69bd4835ede8654b631a96f1887c59f2dc67e3e52d7"
+content-hash = "6dc81259b698475d5950df2c0d7f6f02796d0efbfc7e712bfa4e9bd9ab99d300"

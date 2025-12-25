@@ -1,18 +1,25 @@
-from rest_framework import viewsets, generics, status, permissions
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from rest_framework.filters import OrderingFilter
-from rest_framework_simplejwt.tokens import RefreshToken
-from django_filters.rest_framework import DjangoFilterBackend
+import logging
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from .models import Payment
-from .serializers import (
-    UserSerializer, UserCreateSerializer, UserUpdateSerializer,
-    UserLoginSerializer, PaymentSerializer
-)
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics, permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+from lms.models import Course, Lesson
+from lms.stripe_service import StripeService
 from .filters import PaymentFilter
-from .permissions import IsOwner, IsNotModerator
+from .models import Payment, User
+from .permissions import IsNotModerator, IsOwner
+from .serializers import (PaymentSerializer, UserCreateSerializer,
+                          UserLoginSerializer, UserSerializer,
+                          UserUpdateSerializer)
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -154,22 +161,6 @@ class UserPaymentsAPIView(generics.ListAPIView):
         """Получаем платежи пользователя."""
         user_id = self.kwargs['user_id']
         return Payment.objects.filter(user_id=user_id)
-
-
-from rest_framework import generics, permissions, status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import OrderingFilter
-from .models import Payment, User
-from .serializers import PaymentSerializer
-from .filters import PaymentFilter
-from lms.stripe_service import StripeService
-from lms.models import Course, Lesson
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class PaymentCreateAPIView(generics.CreateAPIView):

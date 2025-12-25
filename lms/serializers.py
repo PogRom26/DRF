@@ -1,6 +1,8 @@
 from rest_framework import serializers
+
 from .models import Course, Lesson, Subscription
-from .validators import YouTubeURLValidator, NoExternalLinksValidator, validate_youtube_url
+from .validators import (NoExternalLinksValidator, YouTubeURLValidator,
+                         validate_youtube_url)
 
 
 class LessonSerializer(serializers.ModelSerializer):
