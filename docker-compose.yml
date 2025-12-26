@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: lms_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lms-network
+
+  web:
+    build: .
+    container_name: lms_web
+    restart: unless-stopped
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+      - sqlite_data:/app/db  # Отдельный volume для базы данных
+    ports:
+      - "8000:8000"
+    environment:
+      # Django settings
+      DJANGO_SETTINGS_MODULE: config.settings
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-default-key-change-this}
+      DEBUG: ${DEBUG:-True}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      
+      # SQLite database path
+      DATABASE_URL: sqlite:///db.sqlite3
+      
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      
+      # Email (для разработки)
+      EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
+      
+      # Stripe (для разработки)
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-pk_test_dummy}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_dummy}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_dummy}
+      BASE_URL: ${BASE_URL:-http://localhost:8000}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - lms-network
+
+  celery-worker:
+    build: .
+    container_name: lms_celery_worker
+    restart: unless-stopped
+    command: celery -A config worker --loglevel=info --concurrency=2
+    volumes:
+      - .:/app
+      - sqlite_data:/app/db
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DATABASE_URL: sqlite:///db.sqlite3
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+    networks:
+      - lms-network
+
+  celery-beat:
+    build: .
+    container_name: lms_celery_beat
+    restart: unless-stopped
+    command: celery -A config beat --loglevel=info
+    volumes:
+      - .:/app
+      - sqlite_data:/app/db
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      DATABASE_URL: sqlite:///db.sqlite3
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+      - celery-worker
+    networks:
+      - lms-network
+
+  flower:
+    build: .
+    container_name: lms_flower
+    restart: unless-stopped
+    command: celery -A config flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      CELERY_BROKER_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+      - celery-worker
+    networks:
+      - lms-network
+
+volumes:
+  redis_data:
+  sqlite_data:  # Volume для сохранения SQLite базы данных
+
+networks:
+  lms-network:
+    driver: bridge
