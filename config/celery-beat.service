@@ -1,0 +1,19 @@
+[Unit]
+Description=LMS Celery Beat
+After=network.target redis-server.service
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=django
+Group=django
+WorkingDirectory=/home/django/lms-project
+Environment="PATH=/home/django/lms-project/venv/bin"
+Environment="DJANGO_SETTINGS_MODULE=config.settings.production"
+ExecStart=/home/django/lms-project/venv/bin/celery \
+    -A config beat \
+    --loglevel=info \
+    --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+[Install]
+WantedBy=multi-user.target

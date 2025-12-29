@@ -1,30 +1,44 @@
+# Dockerfile
 FROM python:3.11-slim
 
-# Устанавливаем системные зависимости
+# Установка системных зависимостей
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
+    libpq-dev \
+    sqlite3 \
+    libsqlite3-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Создание пользователя
+RUN useradd -m -u 1000 django
+
+# Рабочая директория
 WORKDIR /app
 
-# Копируем зависимости
+# Копирование зависимостей
 COPY requirements.txt .
 
-# Устанавливаем Python зависимости
+# Установка Python зависимостей
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем весь проект
+# Копирование проекта
 COPY . .
 
-# Создаем директорию для базы данных
-RUN mkdir -p /app/db
+# Создание директорий
+RUN mkdir -p /app/static /app/media /app/db /app/logs \
+    && chown -R django:django /app
 
-# Создаем пользователя для безопасности
-RUN useradd -m -u 1000 django && \
-    chown -R django:django /app
+# Права на директории
+RUN chmod 755 /app \
+    && chmod 755 /app/db \
+    && chmod 755 /app/logs
+
 USER django
 
+# Порт
 EXPOSE 8000
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Команда запуска
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120"]
