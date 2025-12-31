@@ -3,7 +3,7 @@ name: CI / CD Pipeline
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, master, develop, server]
   pull_request:
     branches: [main, master]
   workflow_dispatch:  # Ручной запуск
@@ -54,38 +54,38 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y sqlite3 libsqlite3-dev
-
+ 
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-django pytest-cov django-coverage
-
+ 
 
       - name: Check code formatting
         run: |
           pip install black isort
           black --check .
           isort --check-only --profile black .
-
+ 
 
       - name: Run migrations and create test database
         run: |
           python manage.py makemigrations
           python manage.py migrate
           python manage.py create_test_data
-
+ 
 
       - name: Run Django tests
         run: |
           python manage.py test --parallel=4
-
+ 
 
       - name: Run API tests with pytest
         run: |
           pytest --ds=config.settings --cov=./ --cov-report=xml --cov-report=html -v
-
+ 
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -99,7 +99,7 @@ jobs:
         run: |
           pip install bandit
           bandit -r . -f json -o bandit-report.json || true
-
+ 
 
       - name: Upload test results
         uses: actions/upload-artifact@v3
@@ -110,12 +110,12 @@ jobs:
             coverage.xml
             bandit-report.json
             htmlcov/
-
+ 
 
   build-docker:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/server')
 
 
     steps:
@@ -130,13 +130,13 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t lms-app:latest .
-
+ 
 
       - name: Save Docker image as artifact
         run: |
           docker save lms-app:latest -o lms-app.tar
           gzip lms-app.tar
-
+ 
 
       - name: Upload Docker image artifact
         uses: actions/upload-artifact@v3
@@ -148,7 +148,7 @@ jobs:
   deploy:
     needs: [test, build-docker]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/server')
 
 
     steps:
@@ -167,71 +167,71 @@ jobs:
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
             set -e
-
-
+ 
+ 
             echo "=== Начало деплоя ==="
             echo "Время: $(date)"
-
-
+ 
+ 
             # Создание директории для деплоя
             DEPLOY_DIR="/home/django/deployments/$(date +%Y%m%d_%H%M%S)"
             mkdir -p $DEPLOY_DIR
-
-
+ 
+ 
             # Копирование образа на сервер
             echo "Копирование Docker образа..."
-
-
+ 
+ 
             # Вариант 1: Без Docker (традиционный деплой)
             echo "Вариант 1: Традиционный деплой"
-
-
+ 
+ 
             cd /home/django/lms-project
-
-
+ 
+ 
             # Обновление кода
             git pull origin main
-
-
+ 
+ 
             # Активация виртуального окружения
             source venv/bin/activate
-
-
+ 
+ 
             # Обновление зависимостей
             pip install -r requirements.txt
-
-
+ 
+ 
             # Применение миграций
             python manage.py migrate
-
-
+ 
+ 
             # Сборка статики
             python manage.py collectstatic --noinput
-
-
+ 
+ 
             # Запуск проверок
             python manage.py check --deploy
-
-
+ 
+ 
             # Перезапуск Gunicorn
             sudo systemctl restart gunicorn
-
-
+ 
+ 
             # Перезапуск Celery
             sudo systemctl restart celery
             sudo systemctl restart celery-beat
-
-
+ 
+ 
             echo "=== Деплой завершен успешно ==="
-
-
+ 
+ 
             # Проверка статуса сервисов
             echo "Проверка статуса сервисов:"
             sudo systemctl status gunicorn --no-pager
             sudo systemctl status celery --no-pager
             sudo systemctl status celery-beat --no-pager
-
-
+ 
+ 
             # Проверка доступности приложения
             sleep 5
             curl -f http://localhost:8000/api/health/ || echo "Health check failed, but continuing..."
