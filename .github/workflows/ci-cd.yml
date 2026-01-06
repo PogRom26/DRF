@@ -5,7 +5,7 @@ on:
   push:
     branches: [main, master, develop, server]
   pull_request:
-    branches: [main, master]
+    branches: [main, master, server]
   workflow_dispatch:  # Ручной запуск
 
 
@@ -102,7 +102,7 @@ jobs:
  
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
@@ -139,7 +139,7 @@ jobs:
  
 
       - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: docker-image
           path: lms-app.tar.gz
@@ -153,7 +153,7 @@ jobs:
 
     steps:
       - name: Download Docker image artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: docker-image
 
