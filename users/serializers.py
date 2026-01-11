@@ -12,28 +12,48 @@ class PaymentSerializer(serializers.ModelSerializer):
 
     course_info = serializers.SerializerMethodField()
     lesson_info = serializers.SerializerMethodField()
-    user_email = serializers.EmailField(source='user.email', read_only=True)
-    stripe_payment_url = serializers.URLField(read_only=True)  # Делаем доступным для чтения
+    user_email = serializers.EmailField(source="user.email", read_only=True)
+    stripe_payment_url = serializers.URLField(
+        read_only=True
+    )  # Делаем доступным для чтения
 
     class Meta:
         model = Payment
         fields = [
-            'id', 'user', 'user_email', 'payment_date',
-            'course', 'lesson', 'course_info', 'lesson_info',
-            'price', 'amount', 'payment_method', 'payment_method_display',
-            'stripe_product_id', 'stripe_price_id', 'stripe_session_id',
-            'stripe_payment_url', 'stripe_payment_intent_id', 'payment_status'
+            "id",
+            "user",
+            "user_email",
+            "payment_date",
+            "course",
+            "lesson",
+            "course_info",
+            "lesson_info",
+            "price",
+            "amount",
+            "payment_method",
+            "payment_method_display",
+            "stripe_product_id",
+            "stripe_price_id",
+            "stripe_session_id",
+            "stripe_payment_url",
+            "stripe_payment_intent_id",
+            "payment_status",
         ]
         read_only_fields = [
-            'payment_date', 'stripe_product_id', 'stripe_price_id',
-            'stripe_session_id', 'stripe_payment_url', 'stripe_payment_intent_id',
-            'payment_status'
+            "payment_date",
+            "stripe_product_id",
+            "stripe_price_id",
+            "stripe_session_id",
+            "stripe_payment_url",
+            "stripe_payment_intent_id",
+            "payment_status",
         ]
 
     def get_course_info(self, obj):
         """Получаем информацию о курсе."""
         if obj.course:
             from lms.serializers import CourseSerializer
+
             return CourseSerializer(obj.course).data
         return None
 
@@ -41,25 +61,25 @@ class PaymentSerializer(serializers.ModelSerializer):
         """Получаем информацию об уроке."""
         if obj.lesson:
             from lms.serializers import LessonSerializer
+
             return LessonSerializer(obj.lesson).data
         return None
 
     payment_method_display = serializers.CharField(
-        source='get_payment_method_display',
-        read_only=True
+        source="get_payment_method_display", read_only=True
     )
 
     def validate(self, data):
         """Валидация данных платежа."""
         # Если выбран способ оплаты stripe, проверяем наличие курса
-        if data.get('payment_method') == 'stripe' and not data.get('course'):
+        if data.get("payment_method") == "stripe" and not data.get("course"):
             raise serializers.ValidationError(
                 {"course": "Для оплаты через Stripe необходимо указать курс"}
             )
 
         # Устанавливаем amount равным price, если amount не указан
-        if 'price' in data and 'amount' not in data:
-            data['amount'] = data['price']
+        if "price" in data and "amount" not in data:
+            data["amount"] = data["price"]
 
         return data
 
@@ -72,11 +92,17 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'first_name', 'last_name',
-            'phone', 'city', 'avatar', 'date_joined',
-            'payments_count'
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "phone",
+            "city",
+            "avatar",
+            "date_joined",
+            "payments_count",
         ]
-        read_only_fields = ['date_joined']
+        read_only_fields = ["date_joined"]
 
     def get_payments_count(self, obj):
         """Количество платежей пользователя."""
@@ -87,46 +113,58 @@ class UserCreateSerializer(serializers.ModelSerializer):
     """Сериализатор для создания пользователя."""
 
     password = serializers.CharField(write_only=True, required=True)
-    password2 = serializers.CharField(write_only=True, required=True, label='Confirm Password')
+    password2 = serializers.CharField(
+        write_only=True, required=True, label="Confirm Password"
+    )
     tokens = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'first_name', 'last_name',
-            'phone', 'city', 'avatar', 'password', 'password2', 'tokens'
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "phone",
+            "city",
+            "avatar",
+            "password",
+            "password2",
+            "tokens",
         ]
         extra_kwargs = {
-            'password': {'write_only': True},
-            'first_name': {'required': False},
-            'last_name': {'required': False},
-            'phone': {'required': False},
-            'city': {'required': False},
-            'avatar': {'required': False},
+            "password": {"write_only": True},
+            "first_name": {"required": False},
+            "last_name": {"required": False},
+            "phone": {"required": False},
+            "city": {"required": False},
+            "avatar": {"required": False},
         }
 
     def get_tokens(self, obj):
         """Получаем токены для пользователя."""
         refresh = RefreshToken.for_user(obj)
         return {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
         }
 
     def validate(self, attrs):
         """Валидация данных при регистрации."""
-        if attrs['password'] != attrs['password2']:
+        if attrs["password"] != attrs["password2"]:
             raise serializers.ValidationError({"password": "Пароли не совпадают"})
 
-        if User.objects.filter(email=attrs['email']).exists():
-            raise serializers.ValidationError({"email": "Пользователь с таким email уже существует"})
+        if User.objects.filter(email=attrs["email"]).exists():
+            raise serializers.ValidationError(
+                {"email": "Пользователь с таким email уже существует"}
+            )
 
         return attrs
 
     def create(self, validated_data):
         """Создание пользователя."""
-        validated_data.pop('password2')
-        password = validated_data.pop('password')
+        validated_data.pop("password2")
+        password = validated_data.pop("password")
 
         user = User(**validated_data)
         user.set_password(password)
@@ -140,11 +178,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = [
-            'id', 'email', 'first_name', 'last_name',
-            'phone', 'city', 'avatar'
-        ]
-        read_only_fields = ['email']  # Email нельзя менять
+        fields = ["id", "email", "first_name", "last_name", "phone", "city", "avatar"]
+        read_only_fields = ["email"]  # Email нельзя менять
 
     def update(self, instance, validated_data):
         """Обновление пользователя."""
@@ -162,17 +197,19 @@ class UserLoginSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         """Валидация данных при входе."""
-        email = attrs.get('email')
-        password = attrs.get('password')
+        email = attrs.get("email")
+        password = attrs.get("password")
 
         if email and password:
             try:
                 user = User.objects.get(email=email)
                 if user.check_password(password):
-                    return {'user': user}
+                    return {"user": user}
                 else:
                     raise serializers.ValidationError("Неверный пароль")
             except User.DoesNotExist:
-                raise serializers.ValidationError("Пользователь с таким email не найден")
+                raise serializers.ValidationError(
+                    "Пользователь с таким email не найден"
+                )
         else:
             raise serializers.ValidationError("Необходимо указать email и пароль")

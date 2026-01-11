@@ -1,17 +1,20 @@
 from django.db import models
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import (OpenApiExample, OpenApiParameter,
-                                   extend_schema)
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 from rest_framework import generics, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
-from users.permissions import (IsCourseOwnerOrAdmin,
-                               IsCourseOwnerOrModeratorOrAdmin,
-                               IsLessonOwnerOrAdmin,
-                               IsLessonOwnerOrModeratorOrAdmin, IsModerator,
-                               IsNotModerator, IsOwnerOrAdmin)
+from users.permissions import (
+    IsCourseOwnerOrAdmin,
+    IsCourseOwnerOrModeratorOrAdmin,
+    IsLessonOwnerOrAdmin,
+    IsLessonOwnerOrModeratorOrAdmin,
+    IsModerator,
+    IsNotModerator,
+    IsOwnerOrAdmin,
+)
 
 from .models import Course, Lesson
 from .paginators import CoursePaginator, LessonPaginator
@@ -27,13 +30,13 @@ class LessonListCreateAPIView(generics.ListCreateAPIView):
 
     def get_serializer_class(self):
         """Выбираем сериализатор в зависимости от метода."""
-        if self.request.method == 'POST':
+        if self.request.method == "POST":
             return LessonSerializer
         return LessonSerializer
 
     def get_permissions(self):
         """Разные права для разных методов."""
-        if self.request.method == 'GET':
+        if self.request.method == "GET":
             # Просмотр доступен авторизованным пользователям
             permission_classes = [IsAuthenticated]
         else:  # POST - создание
@@ -51,7 +54,9 @@ class LessonListCreateAPIView(generics.ListCreateAPIView):
             lesson.course.owner = self.request.user
             lesson.course.save()
 
-        logger.info(f'Урок "{lesson.title}" создан пользователем {self.request.user.email}')
+        logger.info(
+            f'Урок "{lesson.title}" создан пользователем {self.request.user.email}'
+        )
 
         # Если урок связан с курсом, проверяем, нужно ли отправить уведомления
         if lesson.course:
@@ -66,13 +71,12 @@ class LessonListCreateAPIView(generics.ListCreateAPIView):
             return Lesson.objects.none()
 
         # Админы и модераторы видят все уроки
-        if user.is_staff or user.groups.filter(name='moderators').exists():
+        if user.is_staff or user.groups.filter(name="moderators").exists():
             return Lesson.objects.all()
 
         # Обычные пользователи видят только свои уроки и уроки из своих курсов
         return Lesson.objects.filter(
-            models.Q(owner=user) |
-            models.Q(course__owner=user)
+            models.Q(owner=user) | models.Q(course__owner=user)
         )
 
     def _check_and_notify_course_subscribers(self, course_id):
@@ -85,24 +89,24 @@ class LessonListCreateAPIView(generics.ListCreateAPIView):
 
             # Проверяем, есть ли активные подписчики
             has_subscribers = Subscription.objects.filter(
-                course=course,
-                is_active=True
+                course=course, is_active=True
             ).exists()
 
             if has_subscribers and time_since_last_update > timedelta(hours=4):
                 # Запускаем асинхронную задачу для отправки уведомлений
                 check_and_send_course_update_notifications.delay(
-                    course_id=course_id,
-                    force_send=True
+                    course_id=course_id, force_send=True
                 )
-                logger.info(f'Уведомления для курса {course_id} поставлены в очередь')
+                logger.info(f"Уведомления для курса {course_id} поставлены в очередь")
             elif has_subscribers:
-                logger.info(f'Курс {course.title} обновлялся менее 4 часов назад. Уведомления не отправляются.')
+                logger.info(
+                    f"Курс {course.title} обновлялся менее 4 часов назад. Уведомления не отправляются."
+                )
             else:
-                logger.info(f'У курса {course.title} нет активных подписчиков')
+                logger.info(f"У курса {course.title} нет активных подписчиков")
 
         except Course.DoesNotExist:
-            logger.error(f'Курс с ID {course_id} не найден')
+            logger.error(f"Курс с ID {course_id} не найден")
 
 
 class LessonRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -113,20 +117,21 @@ class LessonRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_serializer_class(self):
         """Выбираем сериализатор в зависимости от метода."""
-        if self.request.method in ['PUT', 'PATCH']:
+        if self.request.method in ["PUT", "PATCH"]:
             from .serializers import LessonUpdateSerializer
+
             return LessonUpdateSerializer
         return LessonSerializer
 
     def get_permissions(self):
         """Разные права для разных методов."""
-        if self.request.method == 'GET':
+        if self.request.method == "GET":
             # Просмотр доступен авторизованным пользователям
             permission_classes = [IsAuthenticated]
-        elif self.request.method in ['PUT', 'PATCH']:
+        elif self.request.method in ["PUT", "PATCH"]:
             # Редактирование доступно владельцу, модераторам или админам
             permission_classes = [IsAuthenticated, IsLessonOwnerOrModeratorOrAdmin]
-        elif self.request.method == 'DELETE':
+        elif self.request.method == "DELETE":
             # УДАЛЕНИЕ доступно только владельцу или админу (без модераторов!)
             permission_classes = [IsAuthenticated, IsLessonOwnerOrAdmin]
         else:
@@ -147,14 +152,20 @@ class LessonRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
 
         # Проверяем, действительно ли урок был обновлен
         if old_updated_at != updated_lesson.updated_at:
-            logger.info(f'Урок "{updated_lesson.title}" обновлен пользователем {self.request.user.email}')
+            logger.info(
+                f'Урок "{updated_lesson.title}" обновлен пользователем {self.request.user.email}'
+            )
 
             # Если урок связан с курсом, проверяем, нужно ли отправить уведомления
             if updated_lesson.course:
                 self._check_and_notify_course_subscribers(updated_lesson.course.id)
 
         # Если курс изменился, отправляем уведомления и для нового курса
-        if old_course_id and updated_lesson.course and old_course_id != updated_lesson.course.id:
+        if (
+            old_course_id
+            and updated_lesson.course
+            and old_course_id != updated_lesson.course.id
+        ):
             logger.info(f'Урок "{updated_lesson.title}" перемещен в другой курс')
             self._check_and_notify_course_subscribers(updated_lesson.course.id)
 
@@ -191,13 +202,12 @@ class LessonRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
             return Lesson.objects.none()
 
         # Админы и модераторы видят все уроки
-        if user.is_staff or user.groups.filter(name='moderators').exists():
+        if user.is_staff or user.groups.filter(name="moderators").exists():
             return Lesson.objects.all()
 
         # Обычные пользователи видят только свои уроки и уроки из своих курсов
         return Lesson.objects.filter(
-            models.Q(owner=user) |
-            models.Q(course__owner=user)
+            models.Q(owner=user) | models.Q(course__owner=user)
         )
 
     def _check_and_notify_course_subscribers(self, course_id):
@@ -210,24 +220,24 @@ class LessonRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
 
             # Проверяем, есть ли активные подписчики
             has_subscribers = Subscription.objects.filter(
-                course=course,
-                is_active=True
+                course=course, is_active=True
             ).exists()
 
             if has_subscribers and time_since_last_update > timedelta(hours=4):
                 # Запускаем асинхронную задачу для отправки уведомлений
                 check_and_send_course_update_notifications.delay(
-                    course_id=course_id,
-                    force_send=True
+                    course_id=course_id, force_send=True
                 )
-                logger.info(f'Уведомления для курса {course_id} поставлены в очередь')
+                logger.info(f"Уведомления для курса {course_id} поставлены в очередь")
             elif has_subscribers:
-                logger.info(f'Курс {course.title} обновлялся менее 4 часов назад. Уведомления не отправляются.')
+                logger.info(
+                    f"Курс {course.title} обновлялся менее 4 часов назад. Уведомления не отправляются."
+                )
             else:
-                logger.info(f'У курса {course.title} нет активных подписчиков')
+                logger.info(f"У курса {course.title} нет активных подписчиков")
 
         except Course.DoesNotExist:
-            logger.error(f'Курс с ID {course_id} не найден')
+            logger.error(f"Курс с ID {course_id} не найден")
 
 
 import logging
@@ -240,14 +250,19 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from users.permissions import (IsCourseOwnerOrAdmin,
-                               IsCourseOwnerOrModeratorOrAdmin, IsNotModerator)
+from users.permissions import (
+    IsCourseOwnerOrAdmin,
+    IsCourseOwnerOrModeratorOrAdmin,
+    IsNotModerator,
+)
 
 from .models import Course, Subscription
 from .paginators import CoursePaginator
 from .serializers import CourseSerializer, CourseWithSubscriptionSerializer
-from .tasks import (check_and_send_course_update_notifications,
-                    send_course_update_notifications)
+from .tasks import (
+    check_and_send_course_update_notifications,
+    send_course_update_notifications,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -261,25 +276,25 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         """Выбираем сериализатор в зависимости от действия."""
-        if self.action in ['list', 'retrieve']:
+        if self.action in ["list", "retrieve"]:
             return CourseWithSubscriptionSerializer
         return CourseSerializer
 
     def get_permissions(self):
         """Разные права для разных действий."""
-        if self.action == 'list':
+        if self.action == "list":
             # Список курсов доступен авторизованным пользователям
             permission_classes = [IsAuthenticated]
-        elif self.action == 'retrieve':
+        elif self.action == "retrieve":
             # Детали курса доступны авторизованным пользователям
             permission_classes = [IsAuthenticated]
-        elif self.action == 'create':
+        elif self.action == "create":
             # Создание доступно авторизованным пользователям, которые НЕ модераторы
             permission_classes = [IsAuthenticated, IsNotModerator]
-        elif self.action == 'destroy':
+        elif self.action == "destroy":
             # УДАЛЕНИЕ доступно только владельцу или админу (без модераторов!)
             permission_classes = [IsAuthenticated, IsCourseOwnerOrAdmin]
-        elif self.action in ['update', 'partial_update']:
+        elif self.action in ["update", "partial_update"]:
             # Редактирование доступно владельцу, модераторам или админам
             permission_classes = [IsAuthenticated, IsCourseOwnerOrModeratorOrAdmin]
         else:
@@ -291,7 +306,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Автоматически привязываем курс к текущему пользователю при создании."""
         serializer.save(owner=self.request.user)
-        logger.info(f'Курс создан пользователем {self.request.user.email}')
+        logger.info(f"Курс создан пользователем {self.request.user.email}")
 
     def perform_update(self, serializer):
         """
@@ -307,31 +322,34 @@ class CourseViewSet(viewsets.ModelViewSet):
         # Проверяем, действительно ли курс был обновлен
         # (updated_at автоматически обновляется при сохранении)
         if old_updated_at != updated_course.updated_at:
-            logger.info(f'Курс {updated_course.id} обновлен пользователем {self.request.user.email}')
+            logger.info(
+                f"Курс {updated_course.id} обновлен пользователем {self.request.user.email}"
+            )
 
             # Проверяем, нужно ли отправлять уведомления
             time_since_last_update = timezone.now() - updated_course.updated_at
 
             # Получаем активных подписчиков курса
             subscribers = Subscription.objects.filter(
-                course=updated_course,
-                is_active=True
-            ).select_related('user')
+                course=updated_course, is_active=True
+            ).select_related("user")
 
             if subscribers.exists():
                 # Проверяем, прошел ли 4 часа с последнего обновления
                 if time_since_last_update > timedelta(hours=4):
                     # Запускаем асинхронную задачу для отправки уведомлений
                     check_and_send_course_update_notifications.delay(
-                        course_id=updated_course.id,
-                        force_send=True
+                        course_id=updated_course.id, force_send=True
                     )
-                    logger.info(f'Задача отправки уведомлений для курса {updated_course.id} поставлена в очередь')
+                    logger.info(
+                        f"Задача отправки уведомлений для курса {updated_course.id} поставлена в очередь"
+                    )
                 else:
                     logger.info(
-                        f'Курс {updated_course.title} обновлялся менее 4 часов назад. Уведомления не отправляются.')
+                        f"Курс {updated_course.title} обновлялся менее 4 часов назад. Уведомления не отправляются."
+                    )
             else:
-                logger.info(f'У курса {updated_course.title} нет активных подписчиков')
+                logger.info(f"У курса {updated_course.title} нет активных подписчиков")
 
     def get_queryset(self):
         """Ограничиваем видимость курсов."""
@@ -342,63 +360,68 @@ class CourseViewSet(viewsets.ModelViewSet):
             return Course.objects.none()
 
         # Админы и модераторы видят все курсы
-        if user.is_staff or user.groups.filter(name='moderators').exists():
+        if user.is_staff or user.groups.filter(name="moderators").exists():
             return Course.objects.all()
 
         # Обычные пользователи видят только свои курсы
         return Course.objects.filter(owner=user)
 
-    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["get"], permission_classes=[IsAuthenticated])
     def lessons(self, request, pk=None):
         """Получение всех уроков курса."""
         course = self.get_object()
 
         # Проверяем доступ к курсу
-        if not (course.owner == request.user or
-                request.user.is_staff or
-                request.user.groups.filter(name='moderators').exists()):
+        if not (
+            course.owner == request.user
+            or request.user.is_staff
+            or request.user.groups.filter(name="moderators").exists()
+        ):
             return Response(
                 {"detail": "У вас нет доступа к этому курсу."},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         lessons = course.lessons.all()
         serializer = LessonSerializer(lessons, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def subscribe(self, request, pk=None):
         """Подписка на обновления курса."""
         course = self.get_object()
         user = request.user
 
         # Проверяем доступ к курсу (только для своих курсов или если есть доступ)
-        if not (course.owner == user or
-                user.is_staff or
-                user.groups.filter(name='moderators').exists()):
+        if not (
+            course.owner == user
+            or user.is_staff
+            or user.groups.filter(name="moderators").exists()
+        ):
             return Response(
                 {"detail": "У вас нет доступа к этому курсу."},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         subscription, created = Subscription.objects.get_or_create(
-            user=user,
-            course=course,
-            defaults={'is_active': True}
+            user=user, course=course, defaults={"is_active": True}
         )
 
         if not created:
             subscription.is_active = True
             subscription.save()
 
-        return Response({
-            'status': 'subscribed',
-            'message': f'Вы подписались на обновления курса "{course.title}"',
-            'course_id': course.id,
-            'subscription_id': subscription.id
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "status": "subscribed",
+                "message": f'Вы подписались на обновления курса "{course.title}"',
+                "course_id": course.id,
+                "subscription_id": subscription.id,
+            },
+            status=status.HTTP_200_OK,
+        )
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def unsubscribe(self, request, pk=None):
         """Отписка от обновлений курса."""
         course = self.get_object()
@@ -409,160 +432,174 @@ class CourseViewSet(viewsets.ModelViewSet):
             subscription.is_active = False
             subscription.save()
 
-            return Response({
-                'status': 'unsubscribed',
-                'message': f'Вы отписались от обновлений курса "{course.title}"'
-            }, status=status.HTTP_200_OK)
+            return Response(
+                {
+                    "status": "unsubscribed",
+                    "message": f'Вы отписались от обновлений курса "{course.title}"',
+                },
+                status=status.HTTP_200_OK,
+            )
         except Subscription.DoesNotExist:
-            return Response({
-                'error': 'Вы не подписаны на этот курс'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Вы не подписаны на этот курс"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["get"], permission_classes=[IsAuthenticated])
     def subscribers(self, request, pk=None):
         """Получение списка подписчиков курса (только для владельца, модераторов и админов)."""
         course = self.get_object()
         user = request.user
 
         # Проверяем права доступа
-        if not (course.owner == user or
-                user.is_staff or
-                user.groups.filter(name='moderators').exists()):
+        if not (
+            course.owner == user
+            or user.is_staff
+            or user.groups.filter(name="moderators").exists()
+        ):
             return Response(
                 {"detail": "У вас нет прав для просмотра подписчиков."},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         subscribers = Subscription.objects.filter(
-            course=course,
-            is_active=True
-        ).select_related('user')
+            course=course, is_active=True
+        ).select_related("user")
 
-        data = [{
-            'user_id': sub.user.id,
-            'user_email': sub.user.email,
-            'user_first_name': sub.user.first_name,
-            'user_last_name': sub.user.last_name,
-            'subscribed_at': sub.subscribed_at,
-            'is_active': sub.is_active
-        } for sub in subscribers]
+        data = [
+            {
+                "user_id": sub.user.id,
+                "user_email": sub.user.email,
+                "user_first_name": sub.user.first_name,
+                "user_last_name": sub.user.last_name,
+                "subscribed_at": sub.subscribed_at,
+                "is_active": sub.is_active,
+            }
+            for sub in subscribers
+        ]
 
         return Response(data)
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def test_notification(self, request, pk=None):
         """Тестовая отправка уведомления о курсе (только для владельца, модераторов и админов)."""
         course = self.get_object()
         user = request.user
 
         # Проверяем права доступа
-        if not (course.owner == user or
-                user.is_staff or
-                user.groups.filter(name='moderators').exists()):
+        if not (
+            course.owner == user
+            or user.is_staff
+            or user.groups.filter(name="moderators").exists()
+        ):
             return Response(
                 {"detail": "У вас нет прав для тестирования уведомлений."},
-                status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         # Запускаем задачу для тестирования уведомления
         result = send_course_update_notifications.delay(course.id, user.id)
 
-        return Response({
-            'status': 'notification_sent',
-            'message': f'Тестовое уведомление отправлено на email {user.email}',
-            'task_id': result.id,
-            'course_id': course.id
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "status": "notification_sent",
+                "message": f"Тестовое уведомление отправлено на email {user.email}",
+                "task_id": result.id,
+                "course_id": course.id,
+            },
+            status=status.HTTP_200_OK,
+        )
 
     @extend_schema(
-        tags=['courses'],
-        description='Получить список курсов с пагинацией',
+        tags=["courses"],
+        description="Получить список курсов с пагинацией",
         parameters=[
             OpenApiParameter(
-                name='page',
+                name="page",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description='Номер страницы'
+                description="Номер страницы",
             ),
             OpenApiParameter(
-                name='page_size',
+                name="page_size",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description='Количество элементов на странице (макс. 20)'
+                description="Количество элементов на странице (макс. 20)",
             ),
         ],
         responses={
             200: CourseSerializer(many=True),
-            401: {'description': 'Не авторизован'},
-        }
+            401: {"description": "Не авторизован"},
+        },
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
     @extend_schema(
-        tags=['courses'],
-        description='Получить детальную информацию о курсе',
+        tags=["courses"],
+        description="Получить детальную информацию о курсе",
         responses={
             200: CourseSerializer,
-            401: {'description': 'Не авторизован'},
-            404: {'description': 'Курс не найден'},
-        }
+            401: {"description": "Не авторизован"},
+            404: {"description": "Курс не найден"},
+        },
     )
     def retrieve(self, request, *args, **kwargs):
         return super().retrieve(request, *args, **kwargs)
 
     @extend_schema(
-        tags=['courses'],
-        description='Создать новый курс',
+        tags=["courses"],
+        description="Создать новый курс",
         request=CourseSerializer,
         responses={
             201: CourseSerializer,
-            400: {'description': 'Неверные данные'},
-            401: {'description': 'Не авторизован'},
-            403: {'description': 'Нет прав для создания курса'},
-        }
+            400: {"description": "Неверные данные"},
+            401: {"description": "Не авторизован"},
+            403: {"description": "Нет прав для создания курса"},
+        },
     )
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
 
     @extend_schema(
-        tags=['courses'],
-        description='Обновить курс',
+        tags=["courses"],
+        description="Обновить курс",
         request=CourseSerializer,
         responses={
             200: CourseSerializer,
-            400: {'description': 'Неверные данные'},
-            401: {'description': 'Не авторизован'},
-            403: {'description': 'Нет прав для обновления курса'},
-            404: {'description': 'Курс не найден'},
-        }
+            400: {"description": "Неверные данные"},
+            401: {"description": "Не авторизован"},
+            403: {"description": "Нет прав для обновления курса"},
+            404: {"description": "Курс не найден"},
+        },
     )
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
 
     @extend_schema(
-        tags=['courses'],
-        description='Создать новый курс',
+        tags=["courses"],
+        description="Создать новый курс",
         request=CourseSerializer,
         responses={
             201: CourseSerializer,
-            400: {'description': 'Некорректные данные'},
-            403: {'description': 'Нет прав на создание курса'},
+            400: {"description": "Некорректные данные"},
+            403: {"description": "Нет прав на создание курса"},
         },
         examples=[
             OpenApiExample(
-                'Пример создания курса',
+                "Пример создания курса",
                 value={
-                    'title': 'Новый курс',
-                    'description': 'Описание нового курса',
-                    'preview': None,
+                    "title": "Новый курс",
+                    "description": "Описание нового курса",
+                    "preview": None,
                 },
-                request_only=True
+                request_only=True,
             )
-        ]
+        ],
     )
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
+
 
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -571,8 +608,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Course, Subscription
-from .serializers import (CourseWithSubscriptionSerializer,
-                          SubscriptionSerializer)
+from .serializers import CourseWithSubscriptionSerializer, SubscriptionSerializer
 
 
 class SubscriptionAPIView(APIView):
@@ -583,43 +619,41 @@ class SubscriptionAPIView(APIView):
     def post(self, request, *args, **kwargs):
         """Добавление или удаление подписки на курс."""
         user = request.user
-        course_id = request.data.get('course_id')
+        course_id = request.data.get("course_id")
 
         if not course_id:
             return Response(
-                {"error": "Не указан course_id"},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Не указан course_id"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         # Получаем курс
         course = get_object_or_404(Course, id=course_id)
 
         # Проверяем существующую подписку
-        subscription = Subscription.objects.filter(
-            user=user,
-            course=course
-        ).first()
+        subscription = Subscription.objects.filter(user=user, course=course).first()
 
         if subscription:
             # Если подписка существует - удаляем ее (или деактивируем)
             subscription.delete()
-            message = 'Подписка удалена'
+            message = "Подписка удалена"
             is_subscribed = False
         else:
             # Если подписки нет - создаем новую
             subscription = Subscription.objects.create(
-                user=user,
-                course=course,
-                is_active=True
+                user=user, course=course, is_active=True
             )
-            message = 'Подписка добавлена'
+            message = "Подписка добавлена"
             is_subscribed = True
 
-        return Response({
-            "message": message,
-            "is_subscribed": is_subscribed,
-            "subscription": SubscriptionSerializer(subscription).data if subscription else None
-        })
+        return Response(
+            {
+                "message": message,
+                "is_subscribed": is_subscribed,
+                "subscription": (
+                    SubscriptionSerializer(subscription).data if subscription else None
+                ),
+            }
+        )
 
     def get(self, request, *args, **kwargs):
         """Получение списка подписок пользователя."""
@@ -640,16 +674,17 @@ class CourseSubscriptionAPIView(APIView):
         course = get_object_or_404(Course, id=course_id)
 
         is_subscribed = Subscription.objects.filter(
-            user=user,
-            course=course,
-            is_active=True
+            user=user, course=course, is_active=True
         ).exists()
 
-        return Response({
-            "course_id": course.id,
-            "course_title": course.title,
-            "is_subscribed": is_subscribed
-        })
+        return Response(
+            {
+                "course_id": course.id,
+                "course_title": course.title,
+                "is_subscribed": is_subscribed,
+            }
+        )
+
 
 import logging
 
@@ -667,8 +702,10 @@ class CreateCoursePaymentAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        return Response({
-            'success': True,
-            'message': 'Stripe integration will be implemented here',
-            'payment_url': 'https://stripe.com/test'
-        })
+        return Response(
+            {
+                "success": True,
+                "message": "Stripe integration will be implemented here",
+                "payment_url": "https://stripe.com/test",
+            }
+        )

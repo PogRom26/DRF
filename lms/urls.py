@@ -1,11 +1,21 @@
 from django.urls import path
 
-from .views import (CourseSubscriptionAPIView, LessonListCreateAPIView,
-                    LessonRetrieveUpdateDestroyAPIView, SubscriptionAPIView)
+from .views import (
+    CourseSubscriptionAPIView,
+    LessonListCreateAPIView,
+    LessonRetrieveUpdateDestroyAPIView,
+    SubscriptionAPIView,
+)
 
 urlpatterns = [
-    path('', LessonListCreateAPIView.as_view(), name='lesson-list'),
-    path('<int:pk>/', LessonRetrieveUpdateDestroyAPIView.as_view(), name='lesson-detail'),
-    path('subscriptions/', SubscriptionAPIView.as_view(), name='subscription-list'),
-    path('subscriptions/<int:course_id>/', CourseSubscriptionAPIView.as_view(), name='course-subscription'),
+    path("", LessonListCreateAPIView.as_view(), name="lesson-list"),
+    path(
+        "<int:pk>/", LessonRetrieveUpdateDestroyAPIView.as_view(), name="lesson-detail"
+    ),
+    path("subscriptions/", SubscriptionAPIView.as_view(), name="subscription-list"),
+    path(
+        "subscriptions/<int:course_id>/",
+        CourseSubscriptionAPIView.as_view(),
+        name="course-subscription",
+    ),
 ]

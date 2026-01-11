@@ -24,9 +24,10 @@ def check_inactive_users():
 
         # Находим пользователей, которые не заходили более месяца
         inactive_users = User.objects.filter(
-            last_login__lt=one_month_ago,
-            is_active=True
-        ).exclude(is_superuser=True)  # Не блокируем суперпользователей
+            last_login__lt=one_month_ago, is_active=True
+        ).exclude(
+            is_superuser=True
+        )  # Не блокируем суперпользователей
 
         user_count = inactive_users.count()
 
@@ -35,7 +36,7 @@ def check_inactive_users():
             inactive_users.update(is_active=False)
 
             # Логируем действие
-            logger.info(f'Заблокировано {user_count} неактивных пользователей')
+            logger.info(f"Заблокировано {user_count} неактивных пользователей")
 
             # Отправляем уведомление администратору
             admin_users = User.objects.filter(is_staff=True)
@@ -43,20 +44,20 @@ def check_inactive_users():
 
             if admin_emails:
                 send_mail(
-                    subject=f'Блокировка неактивных пользователей',
-                    message=f'Было заблокировано {user_count} пользователей, которые не заходили в систему более месяца.',
+                    subject=f"Блокировка неактивных пользователей",
+                    message=f"Было заблокировано {user_count} пользователей, которые не заходили в систему более месяца.",
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=admin_emails,
                     fail_silently=True,
                 )
 
-            return f'Заблокировано {user_count} неактивных пользователей'
+            return f"Заблокировано {user_count} неактивных пользователей"
         else:
-            logger.info('Неактивных пользователей для блокировки не найдено')
-            return 'Неактивных пользователей для блокировки не найдено'
+            logger.info("Неактивных пользователей для блокировки не найдено")
+            return "Неактивных пользователей для блокировки не найдено"
 
     except Exception as e:
-        logger.error(f'Ошибка при блокировке неактивных пользователей: {str(e)}')
+        logger.error(f"Ошибка при блокировке неактивных пользователей: {str(e)}")
         raise
 
 
@@ -74,10 +75,10 @@ def send_user_notification_email(user_email, subject, message, html_message=None
             html_message=html_message,
             fail_silently=False,
         )
-        logger.info(f'Письмо отправлено пользователю {user_email}')
+        logger.info(f"Письмо отправлено пользователю {user_email}")
         return True
     except Exception as e:
-        logger.error(f'Ошибка при отправке письма пользователю {user_email}: {str(e)}')
+        logger.error(f"Ошибка при отправке письма пользователю {user_email}: {str(e)}")
         return False
 
 
@@ -97,7 +98,7 @@ def notify_user_about_course_update(course_id, user_id):
         course = Course.objects.get(id=course_id)
 
         # Создаем содержимое письма
-        subject = f'Обновление курса: {course.title}'
+        subject = f"Обновление курса: {course.title}"
 
         # Текстовое сообщение
         message = f"""
@@ -115,13 +116,16 @@ def notify_user_about_course_update(course_id, user_id):
         """
 
         # HTML сообщение
-        html_message = render_to_string('emails/course_update_notification.html', {
-            'user': user,
-            'course': course,
-            'update_date': timezone.now().strftime('%d.%m.%Y %H:%M'),
-            'course_url': f"{settings.BASE_URL}/courses/{course.id}/",
-            'base_url': settings.BASE_URL,
-        })
+        html_message = render_to_string(
+            "emails/course_update_notification.html",
+            {
+                "user": user,
+                "course": course,
+                "update_date": timezone.now().strftime("%d.%m.%Y %H:%M"),
+                "course_url": f"{settings.BASE_URL}/courses/{course.id}/",
+                "base_url": settings.BASE_URL,
+            },
+        )
 
         # Отправляем письмо
         send_mail(
@@ -133,15 +137,17 @@ def notify_user_about_course_update(course_id, user_id):
             fail_silently=True,
         )
 
-        logger.info(f'Уведомление об обновлении курса отправлено пользователю {user.email}')
+        logger.info(
+            f"Уведомление об обновлении курса отправлено пользователю {user.email}"
+        )
         return True
 
     except User.DoesNotExist:
-        logger.error(f'Пользователь с ID {user_id} не найден')
+        logger.error(f"Пользователь с ID {user_id} не найден")
         return False
     except Course.DoesNotExist:
-        logger.error(f'Курс с ID {course_id} не найден')
+        logger.error(f"Курс с ID {course_id} не найден")
         return False
     except Exception as e:
-        logger.error(f'Ошибка при отправке уведомления: {str(e)}')
+        logger.error(f"Ошибка при отправке уведомления: {str(e)}")
         return False

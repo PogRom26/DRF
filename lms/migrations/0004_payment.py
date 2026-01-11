@@ -6,20 +6,82 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('lms', '0003_subscription'),
+        ("lms", "0003_subscription"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Payment',
+            name="Payment",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('stripe_product_id', models.CharField(blank=True, max_length=100, null=True, verbose_name='ID продукта в Stripe')),
-                ('stripe_price_id', models.CharField(blank=True, max_length=100, null=True, verbose_name='ID цены в Stripe')),
-                ('stripe_session_id', models.CharField(blank=True, max_length=100, null=True, verbose_name='ID сессии в Stripe')),
-                ('stripe_payment_intent_id', models.CharField(blank=True, max_length=100, null=True, verbose_name='ID платежа в Stripe')),
-                ('stripe_payment_url', models.URLField(blank=True, max_length=500, null=True, verbose_name='Ссылка на оплату Stripe')),
-                ('payment_status', models.CharField(choices=[('pending', 'Ожидает оплаты'), ('processing', 'В обработке'), ('succeeded', 'Успешно'), ('failed', 'Неудачно'), ('refunded', 'Возвращено')], default='pending', max_length=20, verbose_name='Статус платежа')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "stripe_product_id",
+                    models.CharField(
+                        blank=True,
+                        max_length=100,
+                        null=True,
+                        verbose_name="ID продукта в Stripe",
+                    ),
+                ),
+                (
+                    "stripe_price_id",
+                    models.CharField(
+                        blank=True,
+                        max_length=100,
+                        null=True,
+                        verbose_name="ID цены в Stripe",
+                    ),
+                ),
+                (
+                    "stripe_session_id",
+                    models.CharField(
+                        blank=True,
+                        max_length=100,
+                        null=True,
+                        verbose_name="ID сессии в Stripe",
+                    ),
+                ),
+                (
+                    "stripe_payment_intent_id",
+                    models.CharField(
+                        blank=True,
+                        max_length=100,
+                        null=True,
+                        verbose_name="ID платежа в Stripe",
+                    ),
+                ),
+                (
+                    "stripe_payment_url",
+                    models.URLField(
+                        blank=True,
+                        max_length=500,
+                        null=True,
+                        verbose_name="Ссылка на оплату Stripe",
+                    ),
+                ),
+                (
+                    "payment_status",
+                    models.CharField(
+                        choices=[
+                            ("pending", "Ожидает оплаты"),
+                            ("processing", "В обработке"),
+                            ("succeeded", "Успешно"),
+                            ("failed", "Неудачно"),
+                            ("refunded", "Возвращено"),
+                        ],
+                        default="pending",
+                        max_length=20,
+                        verbose_name="Статус платежа",
+                    ),
+                ),
             ],
         ),
     ]

@@ -6,17 +6,17 @@ class IsOwner(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         # Проверяем, есть ли у объекта поле user или owner
-        if hasattr(obj, 'user'):
+        if hasattr(obj, "user"):
             return obj.user == request.user
-        elif hasattr(obj, 'owner'):
+        elif hasattr(obj, "owner"):
             return obj.owner == request.user
         # Если нет поля user/owner, проверяем, является ли объект пользователем
         return obj == request.user
 
     def has_permission(self, request, view):
         # Для UserPaymentsAPIView проверяем, что user_id соответствует текущему пользователю
-        if hasattr(view, 'kwargs') and 'user_id' in view.kwargs:
-            return str(view.kwargs['user_id']) == str(request.user.id)
+        if hasattr(view, "kwargs") and "user_id" in view.kwargs:
+            return str(view.kwargs["user_id"]) == str(request.user.id)
         return True
 
 
@@ -25,7 +25,7 @@ class IsOwnerOrAdmin(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         # Проверяем, является ли пользователь владельцем
-        if hasattr(obj, 'owner') and obj.owner == request.user:
+        if hasattr(obj, "owner") and obj.owner == request.user:
             return True
 
         # Проверяем, является ли пользователь админом
@@ -40,7 +40,7 @@ class IsOwnerOrAdminOrModerator(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         # Проверяем, является ли пользователь владельцем
-        if hasattr(obj, 'owner') and obj.owner == request.user:
+        if hasattr(obj, "owner") and obj.owner == request.user:
             return True
 
         # Проверяем, является ли пользователь админом
@@ -48,7 +48,7 @@ class IsOwnerOrAdminOrModerator(permissions.BasePermission):
             return True
 
         # Проверяем, является ли пользователь модератором
-        if request.user and request.user.groups.filter(name='moderators').exists():
+        if request.user and request.user.groups.filter(name="moderators").exists():
             return True
 
         return False
@@ -62,7 +62,7 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
             return True
 
         # Проверяем, есть ли у объекта поле owner
-        if hasattr(obj, 'owner'):
+        if hasattr(obj, "owner"):
             return obj.owner == request.user
         # Если нет поля owner, проверяем, является ли объект пользователем
         return obj == request.user
@@ -86,20 +86,24 @@ class IsModerator(permissions.BasePermission):
     """Разрешение для модераторов."""
 
     def has_permission(self, request, view):
-        return request.user and request.user.groups.filter(name='moderators').exists()
+        return request.user and request.user.groups.filter(name="moderators").exists()
 
     def has_object_permission(self, request, view, obj):
-        return request.user and request.user.groups.filter(name='moderators').exists()
+        return request.user and request.user.groups.filter(name="moderators").exists()
 
 
 class IsNotModerator(permissions.BasePermission):
     """Разрешение для пользователей, которые НЕ являются модераторами."""
 
     def has_permission(self, request, view):
-        return request.user and not request.user.groups.filter(name='moderators').exists()
+        return (
+            request.user and not request.user.groups.filter(name="moderators").exists()
+        )
 
     def has_object_permission(self, request, view, obj):
-        return request.user and not request.user.groups.filter(name='moderators').exists()
+        return (
+            request.user and not request.user.groups.filter(name="moderators").exists()
+        )
 
 
 class IsAdminOrModeratorOrReadOnly(permissions.BasePermission):
@@ -112,8 +116,8 @@ class IsAdminOrModeratorOrReadOnly(permissions.BasePermission):
 
         # Для остальных методов проверяем, является ли пользователь админом или модератором
         return request.user and (
-                request.user.is_staff or
-                request.user.groups.filter(name='moderators').exists()
+            request.user.is_staff
+            or request.user.groups.filter(name="moderators").exists()
         )
 
     def has_object_permission(self, request, view, obj):
@@ -123,8 +127,8 @@ class IsAdminOrModeratorOrReadOnly(permissions.BasePermission):
 
         # Для остальных методов проверяем, является ли пользователь админом или модератором
         return request.user and (
-                request.user.is_staff or
-                request.user.groups.filter(name='moderators').exists()
+            request.user.is_staff
+            or request.user.groups.filter(name="moderators").exists()
         )
 
 
@@ -133,14 +137,14 @@ class IsAdminOrModerator(permissions.BasePermission):
 
     def has_permission(self, request, view):
         return request.user and (
-                request.user.is_staff or
-                request.user.groups.filter(name='moderators').exists()
+            request.user.is_staff
+            or request.user.groups.filter(name="moderators").exists()
         )
 
     def has_object_permission(self, request, view, obj):
         return request.user and (
-                request.user.is_staff or
-                request.user.groups.filter(name='moderators').exists()
+            request.user.is_staff
+            or request.user.groups.filter(name="moderators").exists()
         )
 
 
@@ -151,13 +155,13 @@ class IsModeratorOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        return request.user and request.user.groups.filter(name='moderators').exists()
+        return request.user and request.user.groups.filter(name="moderators").exists()
 
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        return request.user and request.user.groups.filter(name='moderators').exists()
+        return request.user and request.user.groups.filter(name="moderators").exists()
 
 
 class IsCourseOwnerOrModeratorOrAdmin(permissions.BasePermission):
@@ -165,13 +169,13 @@ class IsCourseOwnerOrModeratorOrAdmin(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         # Для курсов проверяем владельца
-        if hasattr(obj, 'owner'):
+        if hasattr(obj, "owner"):
             # Проверяем, является ли пользователь владельцем курса
             if obj.owner == request.user:
                 return True
 
         # Проверяем, является ли пользователь модератором
-        if request.user and request.user.groups.filter(name='moderators').exists():
+        if request.user and request.user.groups.filter(name="moderators").exists():
             return True
 
         # Проверяем, является ли пользователь админом
@@ -186,17 +190,17 @@ class IsLessonOwnerOrModeratorOrAdmin(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         # Для уроков проверяем владельца
-        if hasattr(obj, 'owner'):
+        if hasattr(obj, "owner"):
             # Проверяем, является ли пользователь владельцем урока
             if obj.owner == request.user:
                 return True
 
             # Также проверяем, является ли пользователь владельцем курса, к которому относится урок
-            if hasattr(obj, 'course') and obj.course.owner == request.user:
+            if hasattr(obj, "course") and obj.course.owner == request.user:
                 return True
 
         # Проверяем, является ли пользователь модератором
-        if request.user and request.user.groups.filter(name='moderators').exists():
+        if request.user and request.user.groups.filter(name="moderators").exists():
             return True
 
         # Проверяем, является ли пользователь админом
@@ -211,7 +215,7 @@ class IsCourseOwnerOrAdmin(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         # Для курсов проверяем владельца
-        if hasattr(obj, 'owner'):
+        if hasattr(obj, "owner"):
             # Проверяем, является ли пользователь владельцем курса
             if obj.owner == request.user:
                 return True
@@ -228,13 +232,13 @@ class IsLessonOwnerOrAdmin(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         # Для уроков проверяем владельца
-        if hasattr(obj, 'owner'):
+        if hasattr(obj, "owner"):
             # Проверяем, является ли пользователь владельцем урока
             if obj.owner == request.user:
                 return True
 
             # Также проверяем, является ли пользователь владельцем курса, к которому относится урок
-            if hasattr(obj, 'course') and obj.course.owner == request.user:
+            if hasattr(obj, "course") and obj.course.owner == request.user:
                 return True
 
         # Проверяем, является ли пользователь админом (модераторы НЕ проходят)

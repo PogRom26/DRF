@@ -7,12 +7,12 @@ from users.models import Payment, User
 
 
 class Command(BaseCommand):
-    help = 'Создает группы пользователей и назначает им права'
+    help = "Создает группы пользователей и назначает им права"
 
     def handle(self, *args, **kwargs):
         # Создаем группы
-        moderators_group, created = Group.objects.get_or_create(name='moderators')
-        students_group, created = Group.objects.get_or_create(name='students')
+        moderators_group, created = Group.objects.get_or_create(name="moderators")
+        students_group, created = Group.objects.get_or_create(name="students")
 
         # Получаем контент-тайпы
         course_ct = ContentType.objects.get_for_model(Course)
@@ -27,7 +27,12 @@ class Command(BaseCommand):
         # view, change для курсов
         moderators_permissions = Permission.objects.filter(
             content_type__in=[course_ct, lesson_ct],
-            codename__in=['view_course', 'change_course', 'view_lesson', 'change_lesson']
+            codename__in=[
+                "view_course",
+                "change_course",
+                "view_lesson",
+                "change_lesson",
+            ],
         )
 
         # Назначаем права группе модераторов
@@ -36,7 +41,7 @@ class Command(BaseCommand):
         # Права для студентов (только просмотр)
         students_permissions = Permission.objects.filter(
             content_type__in=[course_ct, lesson_ct],
-            codename__in=['view_course', 'view_lesson']
+            codename__in=["view_course", "view_lesson"],
         )
 
         # Назначаем права группе студентов
@@ -44,8 +49,8 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f'Созданы группы: '
-                f'модераторы ({moderators_group.permissions.count()} прав), '
-                f'студенты ({students_group.permissions.count()} прав)'
+                f"Созданы группы: "
+                f"модераторы ({moderators_group.permissions.count()} прав), "
+                f"студенты ({students_group.permissions.count()} прав)"
             )
         )
