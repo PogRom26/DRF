@@ -7,3 +7,4 @@ class PlaceholderTestCase(TestCase):
     def test_placeholder(self):
         """Минимальный тест-заглушка для прохождения проверки pytest."""
         self.assertTrue(True)
+
