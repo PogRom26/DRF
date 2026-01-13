@@ -1,0 +1,43 @@
+name: CI / CD Pipeline
+
+on:
+  push:
+    branches: [main, master, develop, server]
+  pull_request:
+    branches: [main, master, server]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    env:
+      SECRET_KEY: test-secret-key
+      DEBUG: "True"
+      DATABASE_URL: sqlite:///db.sqlite3
+      REDIS_URL: redis://localhost:6379/0
+      STRIPE_PUBLISHABLE_KEY: pk_test_dummy
+      STRIPE_SECRET_KEY: sk_test_dummy
+      BASE_URL: http://localhost:8000
+      EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
+      CELERY_BROKER_URL: redis://localhost:6379/0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies and run tests
+        run: |
+          pip install -r requirements.txt pytest pytest-django
+          python manage.py migrate
+          python manage.py test
+          pytest --ds=config.settings -v

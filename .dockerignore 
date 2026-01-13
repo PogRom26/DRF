@@ -1,0 +1,32 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+instance/
+.webassets-cache
+.cache
+.gitlab-ci.yml
+.gitlab/
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Исключаем media и static из образа
+media/
+static/
+
+# НО включаем db.sqlite3 в образ, если хотим
+# !db.sqlite3

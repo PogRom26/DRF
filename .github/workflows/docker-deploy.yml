@@ -1,0 +1,127 @@
+name: Docker Deploy
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{sha}}-
+          latest
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy-docker:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    
+    steps:
+    - name: Deploy Docker to server
+      uses: appleboy/ssh-action@v0.1.8
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          set -e
+          
+          echo "=== Docker деплой начат ==="
+          
+          # Логин в GitHub Container Registry
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          
+          # Pull latest image
+          IMAGE_NAME="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          echo "Pulling image: $IMAGE_NAME"
+          docker pull $IMAGE_NAME
+          
+          # Остановка и удаление старого контейнера
+          echo "Останавливаем старый контейнер..."
+          docker stop lms-app || true
+          docker rm lms-app || true
+          
+          # Запуск нового контейнера
+          echo "Запускаем новый контейнер..."
+          
+          # Создание директорий для volumes
+          mkdir -p /home/django/data/media
+          mkdir -p /home/django/data/static
+          mkdir -p /home/django/data/db
+          mkdir -p /home/django/data/logs
+          
+          # Запуск контейнера
+          docker run -d \
+            --name lms-app \
+            --restart unless-stopped \
+            -p 127.0.0.1:8000:8000 \
+            -v /home/django/data/media:/app/media \
+            -v /home/django/data/static:/app/static \
+            -v /home/django/data/db:/app/db \
+            -v /home/django/data/logs:/app/logs \
+            -e SECRET_KEY='${{ secrets.SECRET_KEY }}' \
+            -e DEBUG=False \
+            -e ALLOWED_HOSTS='ваш-домен.ru,localhost,127.0.0.1' \
+            -e DATABASE_URL=sqlite:///db/production.db \
+            -e REDIS_URL=redis://localhost:6379/0 \
+            -e CELERY_BROKER_URL=redis://localhost:6379/0 \
+            -e STRIPE_PUBLISHABLE_KEY='${{ secrets.STRIPE_PUBLISHABLE_KEY }}' \
+            -e STRIPE_SECRET_KEY='${{ secrets.STRIPE_SECRET_KEY }}' \
+            -e BASE_URL='https://ваш-домен.ru' \
+            $IMAGE_NAME
+          
+          echo "Контейнер запущен успешно!"
+          
+          # Проверка статуса
+          sleep 10
+          echo "Проверяем статус контейнера..."
+          docker ps | grep lms-app
+          
+          # Health check
+          echo "Выполняем health check..."
+          curl -f http://localhost:8000/api/health/ || echo "Health check failed, проверьте логи"
+          
+          echo "=== Docker деплой завершен ==="

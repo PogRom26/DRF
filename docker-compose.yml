@@ -1,0 +1,90 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: lms_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - lms-network
+
+  web:
+    build: .
+    container_name: lms_web
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media
+      - db_volume:/app/db
+      - logs_volume:/app/logs
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - DATABASE_URL=sqlite:///db/production.db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+    networks:
+      - lms-network
+
+  celery-worker:
+    build: .
+    container_name: lms_celery_worker
+    restart: unless-stopped
+    command: celery -A config worker --loglevel=info --concurrency=4
+    volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media
+      - db_volume:/app/db
+      - logs_volume:/app/logs
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - DATABASE_URL=sqlite:///db/production.db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+    networks:
+      - lms-network
+
+  celery-beat:
+    build: .
+    container_name: lms_celery_beat
+    restart: unless-stopped
+    command: celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media
+      - db_volume:/app/db
+      - logs_volume:/app/logs
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - DATABASE_URL=sqlite:///db/production.db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - web
+    networks:
+      - lms-network
+
+volumes:
+  redis_data:
+  static_volume:
+  media_volume:
+  db_volume:
+  logs_volume:
+
+networks:
+  lms-network:
+    driver: bridge

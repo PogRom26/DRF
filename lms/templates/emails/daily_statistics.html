@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Ежедневная статистика</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .stat-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .stat-table th, .stat-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        .stat-table th { background-color: #f2f2f2; }
+        .highlight { background-color: #f9f9f9; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h2>Ежедневная статистика LMS платформы</h2>
+    <p>Дата: {{ date }}</p>
+
+    <table class="stat-table">
+        <tr>
+            <th colspan="2" class="highlight">Пользователи</th>
+        </tr>
+        <tr>
+            <td>Всего пользователей:</td>
+            <td><strong>{{ total_users }}</strong></td>
+        </tr>
+        <tr>
+            <td>Активных пользователей:</td>
+            <td><strong>{{ active_users }}</strong></td>
+        </tr>
+        <tr>
+            <td>Новых пользователей за сутки:</td>
+            <td><strong>{{ new_users }}</strong></td>
+        </tr>
+
+        <tr>
+            <th colspan="2" class="highlight">Контент</th>
+        </tr>
+        <tr>
+            <td>Всего курсов:</td>
+            <td><strong>{{ total_courses }}</strong></td>
+        </tr>
+        <tr>
+            <td>Всего уроков:</td>
+            <td><strong>{{ total_lessons }}</strong></td>
+        </tr>
+        <tr>
+            <td>Новых курсов за сутки:</td>
+            <td><strong>{{ new_courses }}</strong></td>
+        </tr>
+    </table>
+
+    <p>---<br>
+    С уважением,<br>
+    Система мониторинга LMS</p>
+</body>
+</html>
