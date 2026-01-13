@@ -10,69 +10,34 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     services:
       redis:
         image: redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
         ports:
           - 6379:6379
 
     env:
-      SECRET_KEY: ${{ secrets.SECRET_KEY || 'test-secret-key' }}
+      SECRET_KEY: test-secret-key
       DEBUG: "True"
       DATABASE_URL: sqlite:///db.sqlite3
       REDIS_URL: redis://localhost:6379/0
-      STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY || 'pk_test_dummy' }}
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'sk_test_dummy' }}
+      STRIPE_PUBLISHABLE_KEY: pk_test_dummy
+      STRIPE_SECRET_KEY: sk_test_dummy
       BASE_URL: http://localhost:8000
       EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
       CELERY_BROKER_URL: redis://localhost:6379/0
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          cache: 'pip'
 
-      - name: Install system dependencies
+      - name: Install dependencies and run tests
         run: |
-          sudo apt-get update
-          sudo apt-get install -y sqlite3 libsqlite3-dev
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-django pytest-cov django-coverage
-
-      - name: Check code formatting
-        run: |
-          pip install black isort
-          black --check . || true
-          isort --check-only --profile black . || true
-
-      - name: Run migrations
-        run: |
+          pip install -r requirements.txt pytest pytest-django
           python manage.py migrate
-          python manage.py create_test_data
-
-      - name: Run Django tests
-        run: python manage.py test --parallel=4
-
-      - name: Run API tests with pytest
-        run: pytest --ds=config.settings --cov=./ --cov-report=xml --cov-report=html -v
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        if: success()
-        with:
-          file: ./coverage.xml
-          flags
+          python manage.py test
+          pytest --ds=config.settings -v
