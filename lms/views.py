@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 
 from django.db import models
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -11,16 +12,16 @@ from drf_spectacular.utils import (
 )
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from users.permissions import (
     IsCourseOwnerOrAdmin,
     IsCourseOwnerOrModeratorOrAdmin,
     IsLessonOwnerOrAdmin,
     IsLessonOwnerOrModeratorOrAdmin,
-    IsModerator,
     IsNotModerator,
-    IsOwnerOrAdmin,
 )
 
 from .models import Course, Lesson, Subscription
@@ -29,6 +30,7 @@ from .serializers import (
     CourseSerializer,
     CourseWithSubscriptionSerializer,
     LessonSerializer,
+    SubscriptionSerializer,
 )
 from .tasks import (
     check_and_send_course_update_notifications,
@@ -594,16 +596,6 @@ class CourseViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
 
-from django.shortcuts import get_object_or_404
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
-from .models import Course, Subscription
-from .serializers import CourseWithSubscriptionSerializer, SubscriptionSerializer
-
-
 class SubscriptionAPIView(APIView):
     """API для управления подписками на курсы."""
 
@@ -679,10 +671,7 @@ class CourseSubscriptionAPIView(APIView):
         )
 
 
-
-
 logger = logging.getLogger(__name__)
-
 
 class CreateCoursePaymentAPIView(APIView):
     """Заглушка для создания платежа за курс через Stripe."""

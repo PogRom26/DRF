@@ -1,5 +1,4 @@
 import logging
-from decimal import Decimal
 
 import stripe
 from django.conf import settings

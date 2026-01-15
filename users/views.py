@@ -421,31 +421,3 @@ class CreateStripePaymentForCourseAPIView(APIView):
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-class UserPaymentsAPIView(generics.ListAPIView):
-    """Получение платежей конкретного пользователя (только для админов или владельца)."""
-
-    serializer_class = PaymentSerializer
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_class = PaymentFilter
-    ordering_fields = ["payment_date", "amount"]
-
-    def get_permissions(self):
-        """Только админ или владелец может смотреть платежи."""
-        if (
-            self.request.user.is_staff
-            or self.request.user.groups.filter(name="moderators").exists()
-        ):
-            permission_classes = [permissions.IsAuthenticated]
-        else:
-            # Проверяем, что пользователь запрашивает свои платежи
-            from ..permissions import IsOwner
-
-            permission_classes = [IsOwner]
-        return [permission() for permission in permission_classes]
-
-    def get_queryset(self):
-        """Получаем платежи пользователя."""
-        user_id = self.kwargs["user_id"]
-        return Payment.objects.filter(user_id=user_id)
