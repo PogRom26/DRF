@@ -16,6 +16,75 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
+def notify_user_about_course_update(course_id, user_id):
+    """
+    Отправляет уведомление конкретному пользователю об обновлении курса.
+
+    Args:
+        course_id: ID курса
+        user_id: ID пользователя
+    """
+    try:
+        course = Course.objects.get(id=course_id)
+        user = User.objects.get(id=user_id)
+
+        if not user.email or not user.is_active:
+            return False
+
+        subject = f"Обновление курса: {course.title}"
+
+        # Текстовое сообщение
+        message = f"""
+        Здравствуйте, {user.username}!
+
+        Курс "{course.title}" был обновлен.
+
+        Что нового:
+        • Добавлены новые материалы
+        • Обновлен контент курса
+        • Возможно, появились новые задания
+
+        Посмотреть обновления: {settings.BASE_URL}/courses/{course.id}/
+
+        С уважением,
+        Команда LMS платформы
+        """
+
+        # HTML версия
+        html_message = render_to_string(
+            "emails/course_update.html",
+            {
+                "username": user.username,
+                "course_title": course.title,
+                "course_url": f"{settings.BASE_URL}/courses/{course.id}/",
+                "base_url": settings.BASE_URL,
+            },
+        )
+
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+
+        logger.info(f"Уведомление отправлено пользователю {user.email} о курсе {course.title}")
+        return True
+
+    except User.DoesNotExist:
+        logger.error(f"Пользователь с ID {user_id} не найден")
+        return False
+    except Course.DoesNotExist:
+        logger.error(f"Курс с ID {course_id} не найден")
+        return False
+    except Exception as e:
+        logger.error(f"Ошибка при отправке уведомления пользователю {user_id}: {str(e)}")
+        return False
+
+
+@shared_task
 def send_course_update_notifications(course_id, updated_lesson_id=None):
     """
     Отправляет уведомления подписчикам курса об обновлении материалов.
@@ -43,8 +112,9 @@ def send_course_update_notifications(course_id, updated_lesson_id=None):
         if updated_lesson_id:
             try:
                 updated_lesson = Lesson.objects.get(id=updated_lesson_id)
+                logger.info(f"Обновлен урок: {updated_lesson.title}")
             except Lesson.DoesNotExist:
-                updated_lesson = None
+                logger.warning(f"Урок с ID {updated_lesson_id} не найден")
 
         # Отправляем уведомления каждому подписчику
         successful_sends = 0
@@ -55,18 +125,22 @@ def send_course_update_notifications(course_id, updated_lesson_id=None):
 
             if not user.email or not user.is_active:
                 failed_sends += 1
+                logger.warning(f"Пропущен пользователь {user.id}: нет email или неактивен")
                 continue
 
             # Отправляем уведомление через отдельную задачу
-            result = notify_user_about_course_update.delay(course_id, user.id)
-
-            if result:
+            try:
+                # Используем delay() для асинхронного выполнения
+                notify_user_about_course_update.delay(course_id, user.id)
                 successful_sends += 1
-            else:
+                logger.debug(f"Задача отправки уведомления поставлена для пользователя {user.id}")
+            except Exception as e:
                 failed_sends += 1
+                logger.error(f"Ошибка при постановке задачи для пользователя {user.id}: {str(e)}")
 
         logger.info(
-            f"Уведомления отправлены. Успешно: {successful_sends}, Неудачно: {failed_sends}"
+            f"Уведомления отправлены для курса {course.title}. "
+            f"Успешно: {successful_sends}, Неудачно: {failed_sends}"
         )
 
         return f"Отправлено {successful_sends} из {subscriber_count} уведомлений"
@@ -165,7 +239,7 @@ def send_daily_statistics():
 
 @shared_task
 def check_and_send_course_update_notifications(
-    course_id, updated_lesson_id=None, force_send=False
+        course_id, updated_lesson_id=None, force_send=False
 ):
     """
     Проверяет, нужно ли отправлять уведомление об обновлении курса.
@@ -193,3 +267,28 @@ def check_and_send_course_update_notifications(
     except Exception as e:
         logger.error(f"Ошибка при проверке обновления курса: {str(e)}")
         raise
+
+
+@shared_task
+def cleanup_old_tasks():
+    """
+    Очистка старых выполненных задач Celery (опционально).
+    """
+    try:
+        from celery.backends.database.models import TaskResult
+
+        # Удаляем задачи старше 7 дней
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        deleted_count, _ = TaskResult.objects.filter(
+            date_done__lt=seven_days_ago
+        ).delete()
+
+        logger.info(f"Очищено {deleted_count} старых задач Celery")
+        return f"Очищено {deleted_count} задач"
+
+    except ImportError:
+        logger.warning("Не удалось импортировать TaskResult. Пропускаем очистку.")
+        return "Очистка задач недоступна"
+    except Exception as e:
+        logger.error(f"Ошибка при очистке задач: {str(e)}")
+        return f"Ошибка очистки: {str(e)}"
