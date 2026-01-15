@@ -73,7 +73,9 @@ def notify_user_about_course_update(course_id, user_id):
         logger.error(f"Курс с ID {course_id} не найден")
         return False
     except Exception as e:
-        logger.error(f"Ошибка при отправке уведомления пользователю {user_id}: {str(e)}")
+        logger.error(
+            f"Ошибка при отправке уведомления пользователю {user_id}: {str(e)}"
+        )
         return False
 
 
@@ -87,10 +89,14 @@ def _process_subscription(subscription, course_id):
 
     try:
         notify_user_about_course_update.delay(course_id, user.id)
-        logger.debug(f"Задача отправки уведомления поставлена для пользователя {user.id}")
+        logger.debug(
+            f"Задача отправки уведомления поставлена для пользователя {user.id}"
+        )
         return True, False
     except Exception as e:
-        logger.error(f"Ошибка при постановке задачи для пользователя {user.id}: {str(e)}")
+        logger.error(
+            f"Ошибка при постановке задачи для пользователя {user.id}: {str(e)}"
+        )
         return False, True
 
 
@@ -204,7 +210,9 @@ def send_daily_statistics():
                 fail_silently=True,
             )
 
-            logger.info(f"Ежедневная статистика отправлена {len(admin_emails)} администраторам")
+            logger.info(
+                f"Ежедневная статистика отправлена {len(admin_emails)} администраторам"
+            )
             return f"Статистика отправлена {len(admin_emails)} администраторам"
         else:
             logger.warning("Нет email адресов администраторов для отправки статистики")

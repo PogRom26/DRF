@@ -44,7 +44,7 @@ def check_inactive_users():
 
             if admin_emails:
                 send_mail(
-                    subject=f"Блокировка неактивных пользователей",
+                    subject="Блокировка неактивных пользователей",
                     message=f"Было заблокировано {user_count} пользователей, которые не заходили в систему более месяца.",
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=admin_emails,

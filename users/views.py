@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from lms.models import Course, Lesson
+from lms.models import Course
 from lms.stripe_service import StripeService
 
 from .filters import PaymentFilter
@@ -27,7 +27,7 @@ from .serializers import (
 
 logger = logging.getLogger(__name__)
 
-User = get_user_model()
+# User = get_user_model()
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -154,7 +154,7 @@ class LogoutAPIView(generics.GenericAPIView):
             )
         except Exception as e:
             return Response(
-                {"error": "Неверный токен"}, status=status.HTTP_400_BAD_REQUEST
+                {f"ошибка: {e}"}, status=status.HTTP_400_BAD_REQUEST
             )
 
 

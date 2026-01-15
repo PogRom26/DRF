@@ -257,8 +257,6 @@ class LessonRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
             logger.error(f"Курс с ID {course_id} не найден")
 
 
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -571,30 +569,6 @@ class CourseViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
 
-    @extend_schema(
-        tags=["courses"],
-        description="Создать новый курс",
-        request=CourseSerializer,
-        responses={
-            201: CourseSerializer,
-            400: {"description": "Некорректные данные"},
-            403: {"description": "Нет прав на создание курса"},
-        },
-        examples=[
-            OpenApiExample(
-                "Пример создания курса",
-                value={
-                    "title": "Новый курс",
-                    "description": "Описание нового курса",
-                    "preview": None,
-                },
-                request_only=True,
-            )
-        ],
-    )
-    def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
-
 
 class SubscriptionAPIView(APIView):
     """API для управления подписками на курсы."""
@@ -672,6 +646,7 @@ class CourseSubscriptionAPIView(APIView):
 
 
 logger = logging.getLogger(__name__)
+
 
 class CreateCoursePaymentAPIView(APIView):
     """Заглушка для создания платежа за курс через Stripe."""

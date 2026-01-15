@@ -17,11 +17,11 @@ class Command(BaseCommand):
         # Получаем контент-тайпы
         course_ct = ContentType.objects.get_for_model(Course)
         lesson_ct = ContentType.objects.get_for_model(Lesson)
-        user_ct = ContentType.objects.get_for_model(User)
-        payment_ct = ContentType.objects.get_for_model(Payment)
+        ContentType.objects.get_for_model(User)
+        ContentType.objects.get_for_model(Payment)
 
         # Получаем все доступные права
-        all_permissions = Permission.objects.all()
+        Permission.objects.all()
 
         # Права для модераторов (просмотр и изменение курсов и уроков)
         # view, change для курсов

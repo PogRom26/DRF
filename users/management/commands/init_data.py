@@ -18,15 +18,35 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **kwargs):
+        """Основной метод для создания тестовых данных."""
         self.stdout.write("Начинаем создание тестовых данных...")
 
-        # Создаем группы
-        moderators_group, created = Group.objects.get_or_create(name="moderators")
-        students_group, created = Group.objects.get_or_create(name="students")
+        groups = self._create_groups()
+        self._create_users(groups)
+        courses = self._create_courses()
+        lessons = self._create_lessons(courses)
+        payments_created = self._create_payments(courses, lessons)
+
+        self._print_summary(payments_created)
+
+        self.stdout.write(self.style.SUCCESS("Тестовые данные успешно созданы!"))
+
+    def _create_groups(self):
+        """Создает группы пользователей."""
+        moderators_group, _ = Group.objects.get_or_create(name="moderators")
+        students_group, _ = Group.objects.get_or_create(name="students")
 
         self.stdout.write(self.style.SUCCESS("Созданы группы: moderators, students"))
+        return {"moderators": moderators_group, "students": students_group}
 
-        # Создаем суперпользователя
+    def _create_users(self, groups):
+        """Создает тестовых пользователей."""
+        self._create_superuser(groups)
+        self._create_moderator(groups)
+        self._create_students(groups)
+
+    def _create_superuser(self, groups):
+        """Создает суперпользователя."""
         if not User.objects.filter(email="admin@example.com").exists():
             admin = User.objects.create_superuser(
                 email="admin@example.com",
@@ -36,12 +56,13 @@ class Command(BaseCommand):
                 phone="+79999999999",
                 city="Москва",
             )
-            admin.groups.add(moderators_group)  # Админ также модератор
+            admin.groups.add(groups["moderators"])
             self.stdout.write(
                 self.style.SUCCESS("Создан суперпользователь (админ и модератор)")
             )
 
-        # Создаем модератора
+    def _create_moderator(self, groups):
+        """Создает тестового модератора."""
         if not User.objects.filter(email="moderator@example.com").exists():
             moderator = User.objects.create_user(
                 email="moderator@example.com",
@@ -51,113 +72,119 @@ class Command(BaseCommand):
                 phone="+79998887766",
                 city="Санкт-Петербург",
             )
-            moderator.groups.add(moderators_group)
+            moderator.groups.add(groups["moderators"])
             self.stdout.write(self.style.SUCCESS("Создан тестовый модератор"))
 
-        # Создаем обычных пользователей (студентов)
-        users_data = [
-            {
-                "email": "student1@example.com",
-                "first_name": "Иван",
-                "last_name": "Иванов",
-            },
-            {
-                "email": "student2@example.com",
-                "first_name": "Мария",
-                "last_name": "Петрова",
-            },
-            {
-                "email": "student3@example.com",
-                "first_name": "Алексей",
-                "last_name": "Сидоров",
-            },
+    def _create_students(self, groups):
+        """Создает тестовых студентов."""
+        import random
+
+        students_data = [
+            {"email": "student1@example.com", "first_name": "Иван", "last_name": "Иванов"},
+            {"email": "student2@example.com", "first_name": "Мария", "last_name": "Петрова"},
+            {"email": "student3@example.com", "first_name": "Алексей", "last_name": "Сидоров"},
         ]
 
-        for user_data in users_data:
-            if not User.objects.filter(email=user_data["email"]).exists():
+        for student_data in students_data:
+            if not User.objects.filter(email=student_data["email"]).exists():
                 user = User.objects.create_user(
-                    email=user_data["email"],
+                    email=student_data["email"],
                     password="password123",
-                    first_name=user_data["first_name"],
-                    last_name=user_data["last_name"],
+                    first_name=student_data["first_name"],
+                    last_name=student_data["last_name"],
                     phone=f"+7999{random.randint(1000000, 9999999)}",
-                    city=random.choice(
-                        ["Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург"]
-                    ),
+                    city=random.choice(["Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург"]),
                 )
-                user.groups.add(students_group)
+                user.groups.add(groups["students"])
 
         self.stdout.write(self.style.SUCCESS("Созданы студенты"))
 
-        # Создаем курсы
+    def _create_courses(self):
+        """Создает тестовые курсы."""
+        admin = User.objects.filter(email="admin@example.com").first()
+
         courses_data = [
             {
                 "title": "Python для начинающих",
                 "description": "Полный курс по основам программирования на Python",
+                "owner": admin,
             },
             {
                 "title": "Django и DRF",
                 "description": "Создание веб-приложений с использованием Django и Django REST Framework",
+                "owner": admin,
             },
             {
                 "title": "JavaScript современный",
                 "description": "Изучение современных возможностей JavaScript и фреймворков",
+                "owner": admin,
             },
             {
                 "title": "Базы данных и SQL",
                 "description": "Основы работы с базами данных и языком запросов SQL",
+                "owner": admin,
             },
         ]
 
         courses = []
         for course_data in courses_data:
             course, created = Course.objects.get_or_create(
-                title=course_data["title"], defaults=course_data
+                title=course_data["title"],
+                defaults=course_data
             )
             if created:
                 courses.append(course)
 
         self.stdout.write(self.style.SUCCESS("Созданы курсы"))
+        return courses
 
-        # Создаем уроки
-        lessons_data = []
+    def _create_lessons(self, courses):
+        """Создает тестовые уроки."""
+        lessons = []
 
         for course in courses:
             for i in range(1, 6):  # По 5 уроков на каждый курс
                 lesson_data = {
                     "title": f'Урок {i}: Основы курса "{course.title}"',
-                    "description": f'Подробное описание урока {i} курса "{course.title}". '
-                    f"Этот урок покрывает важные аспекты темы.",
+                    "description": f'Подробное описание урока {i} курса "{course.title}".',
                     "video_url": f"https://www.youtube.com/watch?v=lesson_{course.id}_{i}",
                     "course": course,
+                    "owner": course.owner,
                 }
+
                 lesson, created = Lesson.objects.get_or_create(
-                    title=lesson_data["title"], course=course, defaults=lesson_data
+                    title=lesson_data["title"],
+                    course=course,
+                    defaults=lesson_data
                 )
+
                 if created:
-                    lessons_data.append(lesson)
+                    lessons.append(lesson)
 
         self.stdout.write(self.style.SUCCESS("Созданы уроки"))
+        return lessons
+
+    def _create_payments(self, courses, lessons):
+        """Создает тестовые платежи."""
+        import random
+        from decimal import Decimal
+        from datetime import datetime, timedelta
 
         # Очищаем старые платежи
         Payment.objects.all().delete()
 
-        # Получаем всех пользователей, курсы и уроки
         users = User.objects.all()
-        courses = Course.objects.all()
-        lessons = Lesson.objects.all()
 
-        # Создаем платежи
         payments_created = 0
         for i in range(30):  # Создаем 30 тестовых платежей
             user = random.choice(users)
 
             # Выбираем, оплачиваем курс или урок
-            if random.choice([True, False]) and courses.exists():
+            if random.choice([True, False]) and courses:
                 course = random.choice(courses)
                 lesson = None
                 amount = Decimal(random.uniform(5000, 20000)).quantize(Decimal("0.00"))
-            elif lessons.exists():
+            elif lessons:
                 course = None
                 lesson = random.choice(lessons)
                 amount = Decimal(random.uniform(500, 3000)).quantize(Decimal("0.00"))
@@ -178,10 +205,8 @@ class Command(BaseCommand):
                     lesson=lesson,
                     amount=amount,
                     payment_method=payment_method,
+                    payment_date=payment_date,
                 )
-                # Обновляем дату вручную
-                payment.payment_date = payment_date
-                payment.save(update_fields=["payment_date"])
                 payments_created += 1
 
             except Exception as e:
@@ -190,9 +215,10 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(f"Успешно создано {payments_created} платежей")
         )
-        self.stdout.write(self.style.SUCCESS("Тестовые данные успешно созданы!"))
+        return payments_created
 
-        # Выводим информацию для тестирования
+    def _print_summary(self, payments_created):
+        """Выводит информацию для тестирования."""
         self.stdout.write("\n" + "=" * 50)
         self.stdout.write("ДАННЫЕ ДЛЯ ТЕСТИРОВАНИЯ:")
         self.stdout.write("=" * 50)
@@ -218,32 +244,5 @@ class Command(BaseCommand):
             "  2. Модераторы могут просматривать и редактировать, но не создавать/удалять"
         )
         self.stdout.write("  3. Админы могут все")
+        self.stdout.write(f"\nСоздано платежей: {payments_created}")
         self.stdout.write("=" * 50)
-
-        # В разделе создания курсов:
-        for course_data in courses_data:
-            course, created = Course.objects.get_or_create(
-                title=course_data["title"],
-                defaults={
-                    **course_data,
-                    "owner": User.objects.filter(
-                        email="admin@example.com"
-                    ).first(),  # Админ владеет курсами
-                },
-            )
-            if created:
-                courses.append(course)
-
-        # В разделе создания уроков:
-        for course in courses:
-            for i in range(1, 6):
-                lesson_data = {
-                    "title": f'Урок {i}: Основы курса "{course.title}"',
-                    "description": f'Подробное описание урока {i} курса "{course.title}".',
-                    "video_url": f"https://www.youtube.com/watch?v=lesson_{course.id}_{i}",
-                    "course": course,
-                    "owner": course.owner,  # Уроки принадлежат тому же владельцу, что и курс
-                }
-                lesson, created = Lesson.objects.get_or_create(
-                    title=lesson_data["title"], course=course, defaults=lesson_data
-                )
