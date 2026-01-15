@@ -77,7 +77,6 @@ class Command(BaseCommand):
 
     def _create_students(self, groups):
         """Создает тестовых студентов."""
-        import random
 
         students_data = [
             {"email": "student1@example.com", "first_name": "Иван", "last_name": "Иванов"},
@@ -166,10 +165,6 @@ class Command(BaseCommand):
 
     def _create_payments(self, courses, lessons):
         """Создает тестовые платежи."""
-        import random
-        from decimal import Decimal
-        from datetime import datetime, timedelta
-
         # Очищаем старые платежи
         Payment.objects.all().delete()
 

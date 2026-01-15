@@ -5,7 +5,6 @@ from django.db import models
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import (
-    OpenApiExample,
     OpenApiParameter,
     OpenApiTypes,
     extend_schema,
