@@ -100,6 +100,21 @@ def _process_subscription(subscription, course_id):
         return False, True
 
 
+def _send_notifications_to_subscriptions(subscriptions, course_id):
+    """Отправляет уведомления всем подписчикам."""
+    successful_sends = 0
+    failed_sends = 0
+
+    for subscription in subscriptions:
+        success, failed = _process_subscription(subscription, course_id)
+        if success:
+            successful_sends += 1
+        if failed:
+            failed_sends += 1
+
+    return successful_sends, failed_sends
+
+
 @shared_task
 def send_course_update_notifications(course_id, updated_lesson_id=None):
     """Отправляет уведомления подписчикам курса об обновлении материалов."""
@@ -123,15 +138,9 @@ def send_course_update_notifications(course_id, updated_lesson_id=None):
             except Lesson.DoesNotExist:
                 logger.warning(f"Урок с ID {updated_lesson_id} не найден")
 
-        successful_sends = 0
-        failed_sends = 0
-
-        for subscription in subscriptions:
-            success, failed = _process_subscription(subscription, course_id)
-            if success:
-                successful_sends += 1
-            if failed:
-                failed_sends += 1
+        successful_sends, failed_sends = _send_notifications_to_subscriptions(
+            subscriptions, course_id
+        )
 
         logger.info(
             f"Уведомления отправлены для курса {course.title}. "

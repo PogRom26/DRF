@@ -194,7 +194,7 @@ class Command(BaseCommand):
             payment_date = datetime.now() - timedelta(days=days_ago)
 
             try:
-                payment = Payment.objects.create(
+                Payment.objects.create(
                     user=user,
                     course=course,
                     lesson=lesson,
