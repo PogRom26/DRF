@@ -1,7 +1,24 @@
-# docker-compose.yml
 version: '3.8'
 
 services:
+  db:
+    image: postgres:15-alpine
+    container_name: lms_postgres
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DB_NAME:-lms}
+      POSTGRES_USER: ${DB_USER:-lmsuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-lmspassword}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-lmsuser}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lms-network
+
   redis:
     image: redis:7-alpine
     container_name: lms_redis
@@ -9,6 +26,11 @@ services:
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - lms-network
 
@@ -16,21 +38,21 @@ services:
     build: .
     container_name: lms_web
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
-      - db_volume:/app/db
       - logs_volume:/app/logs
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.production
-      - DATABASE_URL=sqlite:///db/production.db
+      - DATABASE_URL=postgresql://${DB_USER:-lmsuser}:${DB_PASSWORD:-lmspassword}@db:5432/${DB_NAME:-lms}
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    depends_on:
-      - redis
     networks:
       - lms-network
 
@@ -39,20 +61,19 @@ services:
     container_name: lms_celery_worker
     restart: unless-stopped
     command: celery -A config worker --loglevel=info --concurrency=4
-    volumes:
-      - static_volume:/app/static
-      - media_volume:/app/media
-      - db_volume:/app/db
-      - logs_volume:/app/logs
-    environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.production
-      - DATABASE_URL=sqlite:///db/production.db
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:
       - redis
       - web
+    volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - DATABASE_URL=postgresql://${DB_USER:-lmsuser}:${DB_PASSWORD:-lmspassword}@db:5432/${DB_NAME:-lms}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     networks:
       - lms-network
 
@@ -61,28 +82,44 @@ services:
     container_name: lms_celery_beat
     restart: unless-stopped
     command: celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    depends_on:
+      - redis
+      - web
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
-      - db_volume:/app/db
       - logs_volume:/app/logs
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.production
-      - DATABASE_URL=sqlite:///db/production.db
+      - DATABASE_URL=postgresql://${DB_USER:-lmsuser}:${DB_PASSWORD:-lmspassword}@db:5432/${DB_NAME:-lms}
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    networks:
+      - lms-network
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: lms_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - static_volume:/app/static
+      - media_volume:/app/media
     depends_on:
-      - redis
       - web
     networks:
       - lms-network
 
 volumes:
+  postgres_data:
   redis_data:
   static_volume:
   media_volume:
-  db_volume:
   logs_volume:
 
 networks:

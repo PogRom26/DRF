@@ -1,39 +1,44 @@
 # Dockerfile
-FROM python:3.12-slim
+FROM python:3.12-slim as builder
 
-# Установка системных зависимостей
+# Установка системных зависимостей для сборки
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     libpq-dev \
-    sqlite3 \
-    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Копирование и установка зависимостей
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Финальный образ
+FROM python:3.12-slim
+
+# Установка рантайм зависимостей
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Создание пользователя
 RUN useradd -m -u 1000 django
 
-# Рабочая директория
 WORKDIR /app
 
-# Копирование зависимостей
-COPY requirements.txt .
-
-# Установка Python зависимостей
-RUN pip install --no-cache-dir -r requirements.txt
+# Копирование зависимостей из builder
+COPY --from=builder /root/.local /home/django/.local
+ENV PATH=/home/django/.local/bin:$PATH
 
 # Копирование проекта
-COPY . .
+COPY --chown=django:django . .
 
 # Создание директорий
-RUN mkdir -p /app/static /app/media /app/db /app/logs \
-    && chown -R django:django /app
-
-# Права на директории
-RUN chmod 755 /app \
-    && chmod 755 /app/db \
-    && chmod 755 /app/logs
+RUN mkdir -p /app/static /app/media /app/logs \
+    && chown -R django:django /app \
+    && chmod 755 /app /app/logs
 
 USER django
 
@@ -41,4 +46,4 @@ USER django
 EXPOSE 8000
 
 # Команда запуска
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "--access-logfile", "-"]
