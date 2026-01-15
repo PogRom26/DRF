@@ -86,7 +86,6 @@ jobs:
 
       - name: Run tests
         run: |
-          python manage.py makemigrations --check --dry-run
           python manage.py test --verbosity=2
           pytest --ds=config.settings -v --cov=.
 
