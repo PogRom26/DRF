@@ -1,0 +1,96 @@
+[flake8]
+# Максимальная длина строки
+max-line-length = 127
+
+# Игнорируемые ошибки
+ignore =
+    # Сложность функций (C901) - допустима в командах управления
+    C901,
+    # Неиспользуемые импорты в __init__.py (F401)
+    F401,
+    # Неиспользуемые переменные (F841) - иногда нужно для читаемости
+    F841,
+    # Пустые строки в конце файла (W292, W391)
+    W292, W391,
+    # Пустые строки в начале файла (W391)
+    W391,
+    # Пропуск строк после блока (E303)
+    E303,
+    # Недостаточно пустых строк (E302)
+    E302,
+    # Слишком много пустых строк (E303)
+    E303,
+    # Импорт не в начале файла (E402) - иногда нужно для условий
+    E402,
+    # Длина строк (E501) - уже ограничено max-line-length
+    E501
+    W503
+    W504
+
+# Исключаемые файлы и директории
+exclude =
+    .git,
+    __pycache__,
+    *.pyc,
+    .venv,
+    venv,
+    env,
+    .env,
+    migrations/,
+    node_modules/,
+    build/,
+    dist/,
+    .eggs/,
+    *.egg-info/,
+    .tox/,
+    .coverage,
+    coverage.xml,
+    htmlcov/,
+    .pytest_cache/,
+    .mypy_cache/
+
+# Максимальная сложность функции (McCabe complexity)
+max-complexity = 15
+
+# Формат вывода
+format = default
+statistics = True
+
+# Расположение per-file-ignores
+per-file-ignores =
+    # В миграциях игнорируем длину строк и неиспользуемые импорты
+    */migrations/*.py: E501,F401
+    # В файлах управления командами допустима высокая сложность
+    */management/commands/*.py: C901
+    # В тестах допустимы неиспользуемые импорты для фикстур
+    *_test.py: F401
+    test_*.py: F401
+    */tests/*.py: F401
+    # В файлах celery задач
+    *tasks.py: C901
+    # В настройках Django
+    *settings.py: F401
+    */settings/*.py: F401
+    # В asgi/wsgi файлах
+    asgi.py: F401
+    wsgi.py: F401
+
+# Подсчет статистики
+count = True
+show-source = True
+
+# Дополнительные плагины (если установлены)
+# plugins =
+#     flake8-docstrings,
+#     flake8-import-order,
+#     flake8-bandit
+
+# Настройки для конкретных плагинов
+[flake8:typing]
+# Игнорировать ошибки типизации для учебного проекта
+ignore = ANN, TYP
+
+[flake8:import-order]
+# Порядок импортов
+import-order-style = pep8
+application-import-names = lms, users, config

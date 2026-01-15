@@ -205,3 +205,59 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+/.github/workflows/ci-cd — копия.yml
+
+
+media/
+!media/.gitkeep
+staticfiles/
+
+# Virtual Environment
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Environment variables
+
+!.env.example
+
+# SSL certificates
+*.pem
+*.key
+*.crt
+
+# Database
+*.db
+*.sqlite3
+
+logs/
+
+# Backup files
+*.bak
+*.backup
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Development
+development.db
+test.db

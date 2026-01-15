@@ -1,0 +1,24 @@
+[Unit]
+Description=LMS Celery Worker
+After=network.target redis-server.service
+Requires=redis-server.service
+
+[Service]
+Type=forking
+User=django
+Group=django
+WorkingDirectory=/home/django/lms-project
+Environment="PATH=/home/django/lms-project/venv/bin"
+Environment="DJANGO_SETTINGS_MODULE=config.settings.production"
+ExecStart=/home/django/lms-project/venv/bin/celery \
+    -A config worker \
+    --loglevel=info \
+    --concurrency=4 \
+    --pidfile=/tmp/celery.pid \
+    --detach
+ExecStop=/bin/kill -s TERM $MAINPID
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
