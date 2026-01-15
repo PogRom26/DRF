@@ -79,9 +79,21 @@ class Command(BaseCommand):
         """Создает тестовых студентов."""
 
         students_data = [
-            {"email": "student1@example.com", "first_name": "Иван", "last_name": "Иванов"},
-            {"email": "student2@example.com", "first_name": "Мария", "last_name": "Петрова"},
-            {"email": "student3@example.com", "first_name": "Алексей", "last_name": "Сидоров"},
+            {
+                "email": "student1@example.com",
+                "first_name": "Иван",
+                "last_name": "Иванов",
+            },
+            {
+                "email": "student2@example.com",
+                "first_name": "Мария",
+                "last_name": "Петрова",
+            },
+            {
+                "email": "student3@example.com",
+                "first_name": "Алексей",
+                "last_name": "Сидоров",
+            },
         ]
 
         for student_data in students_data:
@@ -92,7 +104,9 @@ class Command(BaseCommand):
                     first_name=student_data["first_name"],
                     last_name=student_data["last_name"],
                     phone=f"+7999{random.randint(1000000, 9999999)}",
-                    city=random.choice(["Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург"]),
+                    city=random.choice(
+                        ["Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург"]
+                    ),
                 )
                 user.groups.add(groups["students"])
 
@@ -128,8 +142,7 @@ class Command(BaseCommand):
         courses = []
         for course_data in courses_data:
             course, created = Course.objects.get_or_create(
-                title=course_data["title"],
-                defaults=course_data
+                title=course_data["title"], defaults=course_data
             )
             if created:
                 courses.append(course)
@@ -152,9 +165,7 @@ class Command(BaseCommand):
                 }
 
                 lesson, created = Lesson.objects.get_or_create(
-                    title=lesson_data["title"],
-                    course=course,
-                    defaults=lesson_data
+                    title=lesson_data["title"], course=course, defaults=lesson_data
                 )
 
                 if created:

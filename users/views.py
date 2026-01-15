@@ -152,9 +152,7 @@ class LogoutAPIView(generics.GenericAPIView):
                 {"message": "Успешный выход"}, status=status.HTTP_205_RESET_CONTENT
             )
         except Exception as e:
-            return Response(
-                {f"ошибка: {e}"}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({f"ошибка: {e}"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PaymentListAPIView(generics.ListAPIView):

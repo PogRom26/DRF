@@ -25,13 +25,11 @@ class Migration(migrations.Migration):
                         verbose_name="ID",
                     ),
                 ),
-                ("password", models.CharField(max_length=128,
-                                              verbose_name="password")),
+                ("password", models.CharField(max_length=128, verbose_name="password")),
                 (
                     "last_login",
                     models.DateTimeField(
-                        blank=True, null=True,
-                        verbose_name="last login"
+                        blank=True, null=True, verbose_name="last login"
                     ),
                 ),
                 (
@@ -45,15 +43,13 @@ class Migration(migrations.Migration):
                 (
                     "first_name",
                     models.CharField(
-                        blank=True, max_length=150,
-                        verbose_name="first name"
+                        blank=True, max_length=150, verbose_name="first name"
                     ),
                 ),
                 (
                     "last_name",
                     models.CharField(
-                        blank=True, max_length=150,
-                        verbose_name="last name"
+                        blank=True, max_length=150, verbose_name="last name"
                     ),
                 ),
                 (
@@ -75,28 +71,24 @@ class Migration(migrations.Migration):
                 (
                     "date_joined",
                     models.DateTimeField(
-                        default=django.utils.timezone.now,
-                        verbose_name="date joined"
+                        default=django.utils.timezone.now, verbose_name="date joined"
                     ),
                 ),
                 (
                     "email",
                     models.EmailField(
-                        max_length=254, unique=True,
-                        verbose_name="email address"
+                        max_length=254, unique=True, verbose_name="email address"
                     ),
                 ),
                 (
                     "phone",
                     models.CharField(
-                        blank=True, max_length=15,
-                        verbose_name="phone number"
+                        blank=True, max_length=15, verbose_name="phone number"
                     ),
                 ),
                 (
                     "city",
-                    models.CharField(blank=True, max_length=100,
-                                     verbose_name="city"),
+                    models.CharField(blank=True, max_length=100, verbose_name="city"),
                 ),
                 (
                     "avatar",
