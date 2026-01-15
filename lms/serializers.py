@@ -4,7 +4,6 @@ from .models import Course, Lesson, Subscription
 from .validators import (
     NoExternalLinksValidator,
     YouTubeURLValidator,
-    validate_youtube_url,
 )
 
 

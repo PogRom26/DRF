@@ -1,7 +1,6 @@
 import logging
 from datetime import timedelta
 
-import html2text
 from celery import shared_task
 from django.conf import settings
 from django.core.mail import send_mail
@@ -17,13 +16,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def notify_user_about_course_update(course_id, user_id):
-    """
-    Отправляет уведомление конкретному пользователю об обновлении курса.
-
-    Args:
-        course_id: ID курса
-        user_id: ID пользователя
-    """
+    """Отправляет уведомление конкретному пользователю об обновлении курса."""
     try:
         course = Course.objects.get(id=course_id)
         user = User.objects.get(id=user_id)
@@ -33,7 +26,6 @@ def notify_user_about_course_update(course_id, user_id):
 
         subject = f"Обновление курса: {course.title}"
 
-        # Текстовое сообщение
         message = f"""
         Здравствуйте, {user.username}!
 
@@ -50,7 +42,6 @@ def notify_user_about_course_update(course_id, user_id):
         Команда LMS платформы
         """
 
-        # HTML версия
         html_message = render_to_string(
             "emails/course_update.html",
             {
@@ -70,7 +61,9 @@ def notify_user_about_course_update(course_id, user_id):
             fail_silently=False,
         )
 
-        logger.info(f"Уведомление отправлено пользователю {user.email} о курсе {course.title}")
+        logger.info(
+            f"Уведомление отправлено пользователю {user.email} о курсе {course.title}"
+        )
         return True
 
     except User.DoesNotExist:
@@ -84,19 +77,29 @@ def notify_user_about_course_update(course_id, user_id):
         return False
 
 
+def _process_subscription(subscription, course_id):
+    """Обрабатывает одну подписку для отправки уведомления."""
+    user = subscription.user
+
+    if not user.email or not user.is_active:
+        logger.warning(f"Пропущен пользователь {user.id}: нет email или неактивен")
+        return False, True
+
+    try:
+        notify_user_about_course_update.delay(course_id, user.id)
+        logger.debug(f"Задача отправки уведомления поставлена для пользователя {user.id}")
+        return True, False
+    except Exception as e:
+        logger.error(f"Ошибка при постановке задачи для пользователя {user.id}: {str(e)}")
+        return False, True
+
+
 @shared_task
 def send_course_update_notifications(course_id, updated_lesson_id=None):
-    """
-    Отправляет уведомления подписчикам курса об обновлении материалов.
-
-    Args:
-        course_id: ID обновленного курса
-        updated_lesson_id: ID обновленного урока (опционально)
-    """
+    """Отправляет уведомления подписчикам курса об обновлении материалов."""
     try:
         course = Course.objects.get(id=course_id)
 
-        # Получаем всех подписчиков курса
         subscriptions = Subscription.objects.filter(
             course=course, is_active=True
         ).select_related("user")
@@ -107,8 +110,6 @@ def send_course_update_notifications(course_id, updated_lesson_id=None):
             logger.info(f"Нет активных подписчиков для курса {course.title}")
             return "Нет активных подписчиков"
 
-        # Получаем информацию об обновленном уроке, если указан
-        updated_lesson = None
         if updated_lesson_id:
             try:
                 updated_lesson = Lesson.objects.get(id=updated_lesson_id)
@@ -116,27 +117,15 @@ def send_course_update_notifications(course_id, updated_lesson_id=None):
             except Lesson.DoesNotExist:
                 logger.warning(f"Урок с ID {updated_lesson_id} не найден")
 
-        # Отправляем уведомления каждому подписчику
         successful_sends = 0
         failed_sends = 0
 
         for subscription in subscriptions:
-            user = subscription.user
-
-            if not user.email or not user.is_active:
-                failed_sends += 1
-                logger.warning(f"Пропущен пользователь {user.id}: нет email или неактивен")
-                continue
-
-            # Отправляем уведомление через отдельную задачу
-            try:
-                # Используем delay() для асинхронного выполнения
-                notify_user_about_course_update.delay(course_id, user.id)
+            success, failed = _process_subscription(subscription, course_id)
+            if success:
                 successful_sends += 1
-                logger.debug(f"Задача отправки уведомления поставлена для пользователя {user.id}")
-            except Exception as e:
+            if failed:
                 failed_sends += 1
-                logger.error(f"Ошибка при постановке задачи для пользователя {user.id}: {str(e)}")
 
         logger.info(
             f"Уведомления отправлены для курса {course.title}. "
@@ -155,24 +144,17 @@ def send_course_update_notifications(course_id, updated_lesson_id=None):
 
 @shared_task
 def send_daily_statistics():
-    """
-    Отправляет ежедневную статистику администраторам.
-    """
+    """Отправляет ежедневную статистику администраторам."""
     try:
-        # Собираем статистику
         total_users = User.objects.count()
         active_users = User.objects.filter(is_active=True).count()
         total_courses = Course.objects.count()
         total_lessons = Lesson.objects.count()
 
-        # Новые пользователи за последние 24 часа
         yesterday = timezone.now() - timedelta(days=1)
         new_users = User.objects.filter(date_joined__gte=yesterday).count()
-
-        # Новые курсы за последние 24 часа
         new_courses = Course.objects.filter(created_at__gte=yesterday).count()
 
-        # Подготавливаем сообщение
         subject = f'Ежедневная статистика LMS - {timezone.now().strftime("%d.%m.%Y")}'
 
         message = f"""
@@ -195,7 +177,6 @@ def send_daily_statistics():
         Система мониторинга LMS
         """
 
-        # HTML версия
         html_message = render_to_string(
             "emails/daily_statistics.html",
             {
@@ -210,7 +191,6 @@ def send_daily_statistics():
             },
         )
 
-        # Получаем email администраторов
         admin_users = User.objects.filter(is_staff=True, is_active=True)
         admin_emails = [admin.email for admin in admin_users if admin.email]
 
@@ -224,9 +204,7 @@ def send_daily_statistics():
                 fail_silently=True,
             )
 
-            logger.info(
-                f"Ежедневная статистика отправлена {len(admin_emails)} администраторам"
-            )
+            logger.info(f"Ежедневная статистика отправлена {len(admin_emails)} администраторам")
             return f"Статистика отправлена {len(admin_emails)} администраторам"
         else:
             logger.warning("Нет email адресов администраторов для отправки статистики")
@@ -239,26 +217,21 @@ def send_daily_statistics():
 
 @shared_task
 def check_and_send_course_update_notifications(
-        course_id, updated_lesson_id=None, force_send=False
+    course_id, updated_lesson_id=None, force_send=False
 ):
-    """
-    Проверяет, нужно ли отправлять уведомление об обновлении курса.
-    Отправляет только если курс не обновлялся более 4 часов или если force_send=True.
-    """
+    """Проверяет, нужно ли отправлять уведомление об обновлении курса."""
     try:
         course = Course.objects.get(id=course_id)
 
-        # Проверяем, когда курс последний раз обновлялся
         time_since_last_update = timezone.now() - course.updated_at
 
-        # Если курс обновлялся менее 4 часов назад и не принудительная отправка
         if time_since_last_update < timedelta(hours=4) and not force_send:
             logger.info(
-                f"Курс {course.title} обновлялся менее 4 часов назад. Уведомления не отправляются."
+                f"Курс {course.title} обновлялся менее 4 часов назад. "
+                "Уведомления не отправляются."
             )
             return "Курс обновлялся менее 4 часов назад"
 
-        # Если нужно, отправляем уведомления
         return send_course_update_notifications.delay(course_id, updated_lesson_id)
 
     except Course.DoesNotExist:
@@ -271,13 +244,10 @@ def check_and_send_course_update_notifications(
 
 @shared_task
 def cleanup_old_tasks():
-    """
-    Очистка старых выполненных задач Celery (опционально).
-    """
+    """Очистка старых выполненных задач Celery."""
     try:
         from celery.backends.database.models import TaskResult
 
-        # Удаляем задачи старше 7 дней
         seven_days_ago = timezone.now() - timedelta(days=7)
         deleted_count, _ = TaskResult.objects.filter(
             date_done__lt=seven_days_ago

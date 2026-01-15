@@ -1,10 +1,17 @@
+import logging
+from datetime import timedelta
+
 from django.db import models
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
-from rest_framework import generics, viewsets
+from django.utils import timezone
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiTypes,
+    extend_schema,
+)
+from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
-from rest_framework.response import Response
 
 from users.permissions import (
     IsCourseOwnerOrAdmin,
@@ -16,9 +23,17 @@ from users.permissions import (
     IsOwnerOrAdmin,
 )
 
-from .models import Course, Lesson
+from .models import Course, Lesson, Subscription
 from .paginators import CoursePaginator, LessonPaginator
-from .serializers import CourseSerializer, LessonSerializer
+from .serializers import (
+    CourseSerializer,
+    CourseWithSubscriptionSerializer,
+    LessonSerializer,
+)
+from .tasks import (
+    check_and_send_course_update_notifications,
+    send_course_update_notifications,
+)
 
 
 class LessonListCreateAPIView(generics.ListCreateAPIView):
@@ -240,29 +255,7 @@ class LessonRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
             logger.error(f"Курс с ID {course_id} не найден")
 
 
-import logging
-from datetime import timedelta
 
-from django.utils import timezone
-from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
-from rest_framework import status, viewsets
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
-from users.permissions import (
-    IsCourseOwnerOrAdmin,
-    IsCourseOwnerOrModeratorOrAdmin,
-    IsNotModerator,
-)
-
-from .models import Course, Subscription
-from .paginators import CoursePaginator
-from .serializers import CourseSerializer, CourseWithSubscriptionSerializer
-from .tasks import (
-    check_and_send_course_update_notifications,
-    send_course_update_notifications,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -686,12 +679,7 @@ class CourseSubscriptionAPIView(APIView):
         )
 
 
-import logging
 
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
 
 logger = logging.getLogger(__name__)
 

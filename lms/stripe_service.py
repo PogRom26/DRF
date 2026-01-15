@@ -1,5 +1,4 @@
 import logging
-import os
 from decimal import Decimal
 
 import stripe
